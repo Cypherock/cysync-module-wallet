@@ -33,20 +33,20 @@
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
-"@cypherock/communication@3.0.1-beta.12":
-  version "3.0.1-beta.12"
-  resolved "https://registry.yarnpkg.com/@cypherock/communication/-/communication-3.0.1-beta.12.tgz#88cd0117eed3f8404128316654664d3ba56ff19c"
-  integrity sha512-TDdPddYKpBw0YwB3I1lDeT7y+mAVYWVA0iCOlMpL2eDjxhN1ta5ULpHgosRH7x3pANPLm3rIku0aRP0G0eeWCA==
+"@cypherock/communication@3.0.1-beta.13":
+  version "3.0.1-beta.13"
+  resolved "https://registry.yarnpkg.com/@cypherock/communication/-/communication-3.0.1-beta.13.tgz#31c3f53561a36fad08dcd4cb6d0d0ad84098ca79"
+  integrity sha512-CVb49juuTjfYYLA3ae9cDL8xV2mUYWOae1plPgCQ9TQO8MIzhI1e/XIUxai8CtLFm/BekQ2QJCQ3nxJH4y4ycA==
   dependencies:
     serialport "10.0.0"
     winston "^3.5.1"
 
-"@cypherock/database@3.0.1-beta.10":
-  version "3.0.1-beta.10"
-  resolved "https://registry.yarnpkg.com/@cypherock/database/-/database-3.0.1-beta.10.tgz#03abedf0e573a6070bef7112ea5ba509ce191ccf"
-  integrity sha512-J57dF0+a1t6m78AcN/0zxdzdfam9mbpPlPxl43VAnhOmGgbbSqxy8KyhyUWriJJhVFkEWPPkqvsNvL1z1tPRjA==
+"@cypherock/database@3.0.1-beta.11":
+  version "3.0.1-beta.11"
+  resolved "https://registry.yarnpkg.com/@cypherock/database/-/database-3.0.1-beta.11.tgz#24390ac16aed6d950ecf2fa443736a30caecd663"
+  integrity sha512-yd5KWAur2gYTMnTOTIUl2IvrjEouycY4a97xNbSStY9VP04rBznDifdYeeEbWPJZ9c/pJTjqfXPuIo5BUto31A==
   dependencies:
-    "@cypherock/communication" "3.0.1-beta.12"
+    "@cypherock/communication" "3.0.1-beta.13"
     "@cypherock/server-wrapper" "1.0.1-beta.7"
     "@types/bignumber.js" "^5.0.0"
     aes-js "^3.1.2"

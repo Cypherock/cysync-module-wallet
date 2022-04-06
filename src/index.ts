@@ -4,7 +4,6 @@ export * from './utils/extenalUtils';
 export * from './errors';
 export { logLevel } from './utils';
 
-import { AddressDB } from '@cypherock/database';
 import { COINS, EthCoinData } from '@cypherock/communication';
 
 import BitcoinWallet from './bitcoinForks';
@@ -15,12 +14,12 @@ const newWallet = ({
   coinType,
   xpub,
   zpub,
-  addressDB
+  addressDbUtil
 }: {
   coinType: string;
   xpub: string;
   zpub?: string;
-  addressDB?: AddressDB;
+  addressDbUtil?: any;
 }) => {
   const coin = COINS[coinType.toLowerCase()];
 
@@ -32,7 +31,7 @@ const newWallet = ({
     return new EthereumWallet(xpub, coin);
   }
 
-  return new BitcoinWallet(xpub, coinType, zpub, addressDB);
+  return new BitcoinWallet(xpub, coinType, zpub, addressDbUtil);
 };
 
 export default newWallet;

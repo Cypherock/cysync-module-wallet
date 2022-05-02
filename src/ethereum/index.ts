@@ -400,16 +400,16 @@ export default class EthereumWallet implements IWallet {
     return verifyTxn(signedTxn, this.address);
   }
 
-  getDerivationPath(contractAbbr = 'ETH'): string {
+  public getDerivationPath(contractAbbr = 'ETH'): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
     const accountIndex = '80000000';
     const chainIndex = '00000000';
     //Will only work till the node is < 10
     const addressIndex = '0000000' + this.node;
-    const contract = Buffer.from(contractAbbr.toUpperCase(), 'utf-8').toString(
-      'hex'
-    );
+    const contract = Buffer.from(contractAbbr.toUpperCase(), 'utf-8')
+      .toString('hex')
+      .padEnd(16, '0');
     // 8 byte name
     // contract = contract + '0'.repeat(16 - contract.length);
 

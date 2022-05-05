@@ -10,6 +10,7 @@ export const getTransactionCount = async (
       address,
       network
     })
+    .request()
     .then((res: AxiosResponse) => res.data);
 };
 
@@ -24,6 +25,7 @@ export const getBalance = async (
       network,
       contractAddress
     })
+    .request()
     .then((res: AxiosResponse) => res.data);
 };
 
@@ -33,5 +35,6 @@ export const getDecimal = async (network = 'main', contractAddress: string) => {
       network,
       contractAddress
     })
+    .request()
     .then(res => res.data);
 };

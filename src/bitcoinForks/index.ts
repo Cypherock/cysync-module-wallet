@@ -130,10 +130,12 @@ export default class BitcoinWallet implements IWallet {
       walletName = isSegwit ? this.segwitInternal : this.internal;
     }
 
-    const response: any = await bitcoinServer.wallet.getBalance({
-      coinType: this.coinType,
-      walletName
-    });
+    const response: any = await bitcoinServer.wallet
+      .getBalance({
+        coinType: this.coinType,
+        walletName
+      })
+      .request();
 
     const { balance } = response.data;
     const { unconfirmed_balance } = response.data;
@@ -582,11 +584,12 @@ export default class BitcoinWallet implements IWallet {
     unsignedTransaction: string,
     inputSignatures: string[]
   ): string {
+    let signedTxn: string | undefined;
     try {
       logger.verbose('Generating signed transaction', {
         coin: this.coinType
       });
-      return createSegwitSignedTransaction(
+      signedTxn = createSegwitSignedTransaction(
         unsignedTransaction,
         inputSignatures
       );
@@ -594,6 +597,14 @@ export default class BitcoinWallet implements IWallet {
       logger.error(error);
       throw error;
     }
+
+    if (!signedTxn) {
+      throw new Error('Unable to create signed transaction');
+    }
+
+    // Clear all UTXO cache after generating each signed txn
+    this.clearAllUtxoCache();
+    return signedTxn;
   }
 
   public async verifySignedTxn(
@@ -620,10 +631,12 @@ export default class BitcoinWallet implements IWallet {
       throw new Error('Address DB is required for this action');
     }
 
-    const xResp = await v2Server.getUsedAddresses({
-      xpub: this.xpub,
-      coinType: this.coinType
-    });
+    const xResp = await v2Server
+      .getUsedAddresses({
+        xpub: this.xpub,
+        coinType: this.coinType
+      })
+      .request();
 
     if (xResp.data.tokens && xResp.data.tokens.length > 0) {
       for (const token of xResp.data.tokens) {
@@ -648,10 +661,12 @@ export default class BitcoinWallet implements IWallet {
     }
 
     if (this.zpub) {
-      const zResp = await v2Server.getUsedAddresses({
-        xpub: this.zpub,
-        coinType: this.coinType
-      });
+      const zResp = await v2Server
+        .getUsedAddresses({
+          xpub: this.zpub,
+          coinType: this.coinType
+        })
+        .request();
 
       if (zResp.data.tokens && zResp.data.tokens.length > 0) {
         for (const token of zResp.data.tokens) {
@@ -732,13 +747,15 @@ export default class BitcoinWallet implements IWallet {
     isSegwit: boolean,
     isRefresh?: boolean
   ): Promise<AddressDataList> {
-    const resp = await v2Server.getUsedAddresses(
-      {
-        xpub: isSegwit ? this.zpub || '' : this.xpub,
-        coinType: this.coinType
-      },
-      isRefresh
-    );
+    const resp = await v2Server
+      .getUsedAddresses(
+        {
+          xpub: isSegwit ? this.zpub || '' : this.xpub,
+          coinType: this.coinType
+        },
+        isRefresh
+      )
+      .request();
 
     // rChain: Chain index 0, cChain: Chain Index 1
     const data: AddressDataList = { rChain: [], cChain: [] };
@@ -787,10 +804,12 @@ export default class BitcoinWallet implements IWallet {
   private async fetchUtxos(xpub: string) {
     const utxos: any = [];
 
-    const response: AxiosResponse = await v2Server.getUtxo({
-      coinType: this.coinType,
-      xpub
-    });
+    const response: AxiosResponse = await v2Server
+      .getUtxo({
+        coinType: this.coinType,
+        xpub
+      })
+      .request();
 
     const txrefs = response.data || [];
 
@@ -845,6 +864,27 @@ export default class BitcoinWallet implements IWallet {
     mcache.set(key, utxoList, 90);
     logger.debug('All Utxos', { utxoList, coin: this.coinType });
     return utxoList;
+  }
+
+  private clearAllUtxoCache() {
+    const key = `utxo-${this.external}`;
+    mcache.del(key);
+
+    v2Server
+      .getUtxo({
+        coinType: this.coinType,
+        xpub: this.xpub
+      })
+      .clearCache();
+
+    if (this.zpub !== undefined) {
+      v2Server
+        .getUtxo({
+          coinType: this.coinType,
+          xpub: this.zpub
+        })
+        .clearCache();
+    }
   }
 
   private async newAddress(

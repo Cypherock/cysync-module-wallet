@@ -6,7 +6,7 @@ import {
 } from '@cypherock/server-wrapper';
 import * as bip32 from 'bip32';
 import * as bitcoin from 'bitcoinjs-lib';
-import { AddressDB } from '@cypherock/database';
+import { SendAddressDb } from '@cypherock/database';
 import crypto from 'crypto';
 
 import IWallet from '../interface/wallet';
@@ -49,15 +49,18 @@ export default class BitcoinWallet implements IWallet {
   segwitExternal: string;
   segwitInternal: string;
   network: any;
-  addressDB: AddressDB | undefined;
+  sendAddressDB: SendAddressDb | undefined;
+  walletId: string;
 
   constructor(
     xpub: string,
     coinType: string,
+    walletId: string,
     zpub?: string,
-    addressDB?: AddressDB
+    sendAddressDb?: SendAddressDb
   ) {
     this.xpub = xpub;
+    this.walletId = walletId;
     this.segwitExternal = '';
     this.segwitInternal = '';
     if (zpub !== undefined && BTCCOINS[coinType].hasSegwit) {
@@ -73,7 +76,7 @@ export default class BitcoinWallet implements IWallet {
       this.segwitInternal = `c${segwitHash}`;
     }
     this.coinType = coinType;
-    this.addressDB = addressDB;
+    this.sendAddressDB = sendAddressDb;
     const hash = crypto
       .createHash('sha256')
       .update(xpub)
@@ -199,10 +202,10 @@ export default class BitcoinWallet implements IWallet {
   public async getChainAddressIndex(
     address: string
   ): Promise<{ chainIndex: number; addressIndex: number; isSegwit: boolean }> {
-    if (this.addressDB) {
-      const cacheResult = await this.addressDB.getChainIndex(
+    if (this.sendAddressDB) {
+      const cacheResult = await this.sendAddressDB.getChainIndex(
         address,
-        this.xpub,
+        this.walletId,
         this.coinType
       );
       if (cacheResult) {
@@ -212,10 +215,10 @@ export default class BitcoinWallet implements IWallet {
 
     const res = this.computeChainAddressIndex(address);
 
-    if (this.addressDB) {
-      this.addressDB.insert({
+    if (this.sendAddressDB) {
+      this.sendAddressDB.insert({
         address,
-        xpub: this.xpub,
+        walletId: this.walletId,
         coinType: this.coinType,
         chainIndex: res.chainIndex,
         addressIndex: res.addressIndex,
@@ -514,7 +517,7 @@ export default class BitcoinWallet implements IWallet {
     utxoList: string[];
   }> {
     // This is because we need to mark our addresses
-    if (!this.addressDB) {
+    if (!this.sendAddressDB) {
       throw new Error('Address DB is required for this action');
     }
 
@@ -528,8 +531,8 @@ export default class BitcoinWallet implements IWallet {
       // Get all addresses of that xpub and coin
       // This is because the address from the API is of only 1 wallet,
       // Whereas there are 2 (or 4 in case od BTC & BTCT) wallets.
-      const addressFromDB = await this.addressDB.getAll({
-        xpub: this.xpub,
+      const addressFromDB = await this.sendAddressDB.getAll({
+        walletId: this.walletId,
         coinType: this.coinType
       });
 
@@ -622,7 +625,7 @@ export default class BitcoinWallet implements IWallet {
    */
   public async setupNewWallet() {
     // This is because we maintain the list of created addresses while setting up the wallet.
-    if (!this.addressDB) {
+    if (!this.sendAddressDB) {
       throw new Error('Address DB is required for this action');
     }
 
@@ -630,7 +633,7 @@ export default class BitcoinWallet implements IWallet {
   }
 
   private async getInitialAddressListFromServer() {
-    if (!this.addressDB) {
+    if (!this.sendAddressDB) {
       throw new Error('Address DB is required for this action');
     }
 
@@ -652,9 +655,9 @@ export default class BitcoinWallet implements IWallet {
         const chainIndex = parseInt(pathArr[pathArr.length - 2], 10);
         const addressIndex = parseInt(pathArr[pathArr.length - 1], 10);
 
-        await this.addressDB.insert({
+        await this.sendAddressDB.insert({
           address,
-          xpub: this.xpub,
+          walletId: this.walletId,
           coinType: this.coinType,
           chainIndex,
           addressIndex,
@@ -682,10 +685,10 @@ export default class BitcoinWallet implements IWallet {
           const chainIndex = parseInt(pathArr[pathArr.length - 2], 10);
           const addressIndex = parseInt(pathArr[pathArr.length - 1], 10);
 
-          await this.addressDB.insert({
+          await this.sendAddressDB.insert({
             address,
-            xpub: this.xpub,
             coinType: this.coinType,
+            walletId: this.walletId,
             chainIndex,
             addressIndex,
             isSegwit: true
@@ -732,10 +735,10 @@ export default class BitcoinWallet implements IWallet {
       isSegwit
     });
 
-    if (this.addressDB) {
-      this.addressDB.insert({
+    if (this.sendAddressDB) {
+      this.sendAddressDB.insert({
         address,
-        xpub: this.xpub,
+        walletId: this.walletId,
         coinType: this.coinType,
         chainIndex: chain,
         addressIndex: index,
@@ -778,10 +781,10 @@ export default class BitcoinWallet implements IWallet {
       const chainIndex = parseInt(pathArr[pathArr.length - 2], 10);
       const addressIndex = parseInt(pathArr[pathArr.length - 1], 10);
 
-      if (this.addressDB) {
-        await this.addressDB.insert({
+      if (this.sendAddressDB) {
+        await this.sendAddressDB.insert({
           address,
-          xpub: this.xpub,
+          walletId: this.walletId,
           coinType: this.coinType,
           chainIndex,
           addressIndex,

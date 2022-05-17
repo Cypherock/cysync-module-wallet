@@ -6,7 +6,7 @@ import {
 } from '@cypherock/server-wrapper';
 import * as bip32 from 'bip32';
 import * as bitcoin from 'bitcoinjs-lib';
-import { SendAddressDb } from '@cypherock/database';
+import { SendAddressDB } from '@cypherock/database';
 import crypto from 'crypto';
 
 import IWallet from '../interface/wallet';
@@ -49,7 +49,7 @@ export default class BitcoinWallet implements IWallet {
   segwitExternal: string;
   segwitInternal: string;
   network: any;
-  sendAddressDB: SendAddressDb | undefined;
+  sendAddressDB: SendAddressDB | undefined;
   walletId: string;
 
   constructor(
@@ -57,7 +57,7 @@ export default class BitcoinWallet implements IWallet {
     coinType: string,
     walletId: string,
     zpub?: string,
-    sendAddressDb?: SendAddressDb
+    sendAddressDb?: SendAddressDB
   ) {
     this.xpub = xpub;
     this.walletId = walletId;

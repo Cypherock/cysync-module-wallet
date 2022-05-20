@@ -558,10 +558,13 @@ export default class BitcoinWallet implements IWallet {
       const utxoList = [];
 
       for (const input of inputs) {
-        const hex = await bitcoinServer.transaction.getTxnHex({
-          coinType: this.coinType,
-          hash: input.txId
-        });
+        const response = await bitcoinServer.transaction
+          .getTxnHex({
+            coinType: this.coinType,
+            hash: input.txId
+          })
+          .request();
+        const hex = response.data.data;
         utxoList.push(hex);
         input.isMine = true;
       }

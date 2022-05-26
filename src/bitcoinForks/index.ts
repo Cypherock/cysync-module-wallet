@@ -203,11 +203,11 @@ export default class BitcoinWallet implements IWallet {
     address: string
   ): Promise<{ chainIndex: number; addressIndex: number; isSegwit: boolean }> {
     if (this.addressDB) {
-      const cacheResult = await this.addressDB.getChainIndex(
+      const cacheResult = await this.addressDB.getChainIndex({
         address,
-        this.walletId,
-        this.coinType
-      );
+        walletId: this.walletId,
+        coinType: this.coinType
+      });
       if (cacheResult) {
         return cacheResult;
       }

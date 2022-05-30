@@ -39,7 +39,7 @@ export interface AddressDataList {
   cChain: AddressData[];
 }
 
-export default class BitcoinWallet implements IWallet {
+export default class BitcoinWallet implements Partial<IWallet> {
   xpub: string;
   modifiedZpub?: string;
   zpub?: string;
@@ -123,80 +123,6 @@ export default class BitcoinWallet implements IWallet {
 
   public async newChangeAddress(): Promise<string> {
     return await this.newAddress(1);
-  }
-
-  async getBalance(chain: number, isSegwit?: boolean): Promise<any> {
-    let walletName: string;
-    if (chain === 0) {
-      walletName = isSegwit ? this.segwitExternal : this.external;
-    } else {
-      walletName = isSegwit ? this.segwitInternal : this.internal;
-    }
-
-    const response: any = await bitcoinServer.wallet
-      .getBalance({
-        coinType: this.coinType,
-        walletName
-      })
-      .request();
-
-    const { balance } = response.data;
-    const { unconfirmed_balance } = response.data;
-    const { final_balance } = response.data;
-
-    return {
-      balance,
-      unconfirmedBalance: unconfirmed_balance,
-      finalBalance: final_balance
-    };
-  }
-
-  async getTotalBalance(): Promise<any> {
-    try {
-      const receiveBalance: any = await this.getBalance(0);
-
-      const changeBalance: any = await this.getBalance(1);
-
-      const segwitBalance = {
-        balance: 0,
-        unconfirmedBalance: 0,
-        finalBalance: 0
-      };
-
-      if (this.zpub !== undefined) {
-        const segwitReceiveBalance = await this.getBalance(0, true);
-        const segwitChangeBalance = await this.getBalance(1, true);
-        segwitBalance.balance =
-          segwitReceiveBalance.balance + segwitChangeBalance.balance;
-        segwitBalance.unconfirmedBalance =
-          segwitReceiveBalance.unconfirmedBalance +
-          segwitChangeBalance.unconfirmedBalance;
-        segwitBalance.finalBalance =
-          segwitReceiveBalance.finalBalance + segwitChangeBalance.finalBalance;
-      }
-
-      return {
-        balance:
-          changeBalance.balance +
-          receiveBalance.balance +
-          segwitBalance.balance,
-        unconfirmedBalance:
-          changeBalance.unconfirmedBalance +
-          receiveBalance.unconfirmedBalance +
-          segwitBalance.unconfirmedBalance,
-        finalBalance:
-          changeBalance.finalBalance +
-          receiveBalance.finalBalance +
-          segwitBalance.finalBalance
-      };
-    } catch (e) {
-      logger.error(e);
-    }
-    return {
-      balance: 0,
-      unconfirmedBalance: 0,
-      finalBalance: 0
-    };
   }
 
   public async getChainAddressIndex(

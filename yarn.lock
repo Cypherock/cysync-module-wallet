@@ -42,13 +42,18 @@
     uuid "^8.3.2"
     winston "^3.5.1"
 
-"@cypherock/database@3.0.1-beta.19":
-  version "3.0.1-beta.19"
-  resolved "https://registry.yarnpkg.com/@cypherock/database/-/database-3.0.1-beta.19.tgz#9c8bc61944e6a281cac293084fd3f2a81694372d"
-  integrity sha512-kKVCaXkeFwYsWdRF7GzFBnSCViSBWVgVQSuo7IljAtqdqbywP8f7lK28Yk6Ji9gZjfhrhKtnApIY+KAVcKsvdQ==
+"@cypherock/database@3.0.1-beta.20":
+  version "3.0.1-beta.20"
+  resolved "https://registry.yarnpkg.com/@cypherock/database/-/database-3.0.1-beta.20.tgz#533d99af4cf10b25553b6f539b6373d0b9495459"
+  integrity sha512-GuLUME9+MQ3WbY/hqN3FpotYFAwC2VdBjsd2Ha/UI5lJ0zSJ2wNhQdyRB/AD+xDxeex88gg7ZroPhTPCEnk7hw==
   dependencies:
     "@cypherock/communication" "3.0.1-beta.16"
     "@types/bignumber.js" "^5.0.0"
+    "@types/pouchdb" "^6.4.0"
+    "@types/pouchdb-adapter-websql" "^6.1.4"
+    "@types/pouchdb-find" "^6.3.7"
+    "@types/transform-pouch" "^1.0.1"
+    "@types/websql" "^0.0.27"
     aes-js "^3.1.2"
     bignumber.js "^9.0.2"
     ethereum-input-data-decoder "^0.3.5"

@@ -1,6 +1,6 @@
 {
   "name": "@cypherock/wallet",
-  "version": "3.0.1-beta.24",
+  "version": "3.0.1-beta.25",
   "description": "All coin related operations",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,7 +18,7 @@
     "@bitauth/libauth": "^1.19.1",
     "@cypherock/communication": "3.0.1-beta.16",
     "@cypherock/database": "3.0.1-beta.20",
-    "@cypherock/server-wrapper": "1.0.1-beta.12",
+    "@cypherock/server-wrapper": "1.0.1-beta.13",
     "@ethereumjs/common": "^2.6.2",
     "@ethereumjs/tx": "^3.5.0",
     "axios": "^0.25.0",

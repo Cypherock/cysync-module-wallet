@@ -14,11 +14,13 @@ import EthereumWallet from './ethereum';
 const newWallet = ({
   coinType,
   xpub,
+  walletId,
   zpub,
   addressDB
 }: {
   coinType: string;
   xpub: string;
+  walletId: string;
   zpub?: string;
   addressDB?: AddressDB;
 }) => {
@@ -32,7 +34,7 @@ const newWallet = ({
     return new EthereumWallet(xpub, coin);
   }
 
-  return new BitcoinWallet(xpub, coinType, zpub, addressDB);
+  return new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
 };
 
 export default newWallet;

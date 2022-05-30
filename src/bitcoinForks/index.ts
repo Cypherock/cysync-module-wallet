@@ -50,14 +50,17 @@ export default class BitcoinWallet implements Partial<IWallet> {
   segwitInternal: string;
   network: any;
   addressDB: AddressDB | undefined;
+  walletId: string;
 
   constructor(
     xpub: string,
     coinType: string,
+    walletId: string,
     zpub?: string,
-    addressDB?: AddressDB
+    addressDb?: AddressDB
   ) {
     this.xpub = xpub;
+    this.walletId = walletId;
     this.segwitExternal = '';
     this.segwitInternal = '';
     if (zpub !== undefined && BTCCOINS[coinType].hasSegwit) {
@@ -73,7 +76,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       this.segwitInternal = `c${segwitHash}`;
     }
     this.coinType = coinType;
-    this.addressDB = addressDB;
+    this.addressDB = addressDb;
     const hash = crypto
       .createHash('sha256')
       .update(xpub)
@@ -126,11 +129,11 @@ export default class BitcoinWallet implements Partial<IWallet> {
     address: string
   ): Promise<{ chainIndex: number; addressIndex: number; isSegwit: boolean }> {
     if (this.addressDB) {
-      const cacheResult = await this.addressDB.getChainIndex(
+      const cacheResult = await this.addressDB.getChainIndex({
         address,
-        this.xpub,
-        this.coinType
-      );
+        walletId: this.walletId,
+        coinType: this.coinType
+      });
       if (cacheResult) {
         return cacheResult;
       }
@@ -141,7 +144,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     if (this.addressDB) {
       this.addressDB.insert({
         address,
-        xpub: this.xpub,
+        walletId: this.walletId,
         coinType: this.coinType,
         chainIndex: res.chainIndex,
         addressIndex: res.addressIndex,
@@ -455,7 +458,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       // This is because the address from the API is of only 1 wallet,
       // Whereas there are 2 (or 4 in case od BTC & BTCT) wallets.
       const addressFromDB = await this.addressDB.getAll({
-        xpub: this.xpub,
+        walletId: this.walletId,
         coinType: this.coinType
       });
 
@@ -580,7 +583,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
         await this.addressDB.insert({
           address,
-          xpub: this.xpub,
+          walletId: this.walletId,
           coinType: this.coinType,
           chainIndex,
           addressIndex,
@@ -610,8 +613,8 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
           await this.addressDB.insert({
             address,
-            xpub: this.xpub,
             coinType: this.coinType,
+            walletId: this.walletId,
             chainIndex,
             addressIndex,
             isSegwit: true
@@ -661,7 +664,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     if (this.addressDB) {
       this.addressDB.insert({
         address,
-        xpub: this.xpub,
+        walletId: this.walletId,
         coinType: this.coinType,
         chainIndex: chain,
         addressIndex: index,
@@ -707,7 +710,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       if (this.addressDB) {
         await this.addressDB.insert({
           address,
-          xpub: this.xpub,
+          walletId: this.walletId,
           coinType: this.coinType,
           chainIndex,
           addressIndex,

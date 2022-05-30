@@ -1,6 +1,6 @@
 {
   "name": "@cypherock/wallet",
-  "version": "3.0.1-beta.22",
+  "version": "3.0.1-beta.24",
   "description": "All coin related operations",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,12 +17,10 @@
   "dependencies": {
     "@bitauth/libauth": "^1.19.1",
     "@cypherock/communication": "3.0.1-beta.16",
-    "@cypherock/database": "3.0.1-beta.18",
-    "@cypherock/server-wrapper": "1.0.1-beta.11",
+    "@cypherock/database": "3.0.1-beta.20",
+    "@cypherock/server-wrapper": "1.0.1-beta.12",
     "@ethereumjs/common": "^2.6.2",
     "@ethereumjs/tx": "^3.5.0",
-    "@types/bignumber.js": "^5.0.0",
-    "@types/bs58check": "^2.1.0",
     "axios": "^0.25.0",
     "bech32": "^1.1.4",
     "bignumber.js": "^9.0.2",
@@ -39,6 +37,8 @@
     "winston": "^3.5.1"
   },
   "devDependencies": {
+    "@types/bignumber.js": "^5.0.0",
+    "@types/bs58check": "^2.1.0",
     "@types/nedb": "^1.8.12",
     "@types/node": "^17.0.15",
     "@types/serialport": "^8.0.2",

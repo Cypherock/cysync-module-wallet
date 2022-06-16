@@ -36,14 +36,14 @@ const newWallet = ({
     return new EthereumWallet(xpub, coin);
   }
 
-  return new BitcoinWallet(
+  return new BitcoinWallet({
     xpub,
     coinType,
     walletId,
     zpub,
-    addressDB,
-    transactionDB
-  );
+    addressDb: addressDB,
+    transactionDb: transactionDB
+  });
 };
 
 export default newWallet;

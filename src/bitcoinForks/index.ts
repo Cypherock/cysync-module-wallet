@@ -53,14 +53,16 @@ export default class BitcoinWallet implements Partial<IWallet> {
   transactionDB: TransactionDB | undefined;
   walletId: string;
 
-  constructor(
-    xpub: string,
-    coinType: string,
-    walletId: string,
-    zpub?: string,
-    addressDb?: AddressDB,
-    transactionDb?: TransactionDB
-  ) {
+  constructor(options: {
+    xpub: string;
+    coinType: string;
+    walletId: string;
+    zpub?: string;
+    addressDb?: AddressDB;
+    transactionDb?: TransactionDB;
+  }) {
+    const { xpub, walletId, coinType, zpub, addressDb, transactionDb } =
+      options;
     this.xpub = xpub;
     this.walletId = walletId;
     this.segwitExternal = '';
@@ -268,6 +270,10 @@ export default class BitcoinWallet implements Partial<IWallet> {
     feeRate: any,
     isSendAll?: boolean
   ): Promise<{ inputs: any; outputs: any; fee: any }> {
+    // This is because we need block state of UTXOs
+    if (!this.transactionDB) {
+      throw new Error('Transaction DB is required for this action');
+    }
     const utxos: any[] = await this.fetchAllUtxos();
     const newOutputList: Array<{ address: string; value?: number }> = [];
 
@@ -737,6 +743,9 @@ export default class BitcoinWallet implements Partial<IWallet> {
   }
 
   private async fetchUtxos(xpub: string) {
+    if (!this.transactionDB) {
+      throw new Error('Transaction DB is required for this action');
+    }
     const utxos: any = [];
 
     const response: AxiosResponse = await v2Server
@@ -769,6 +778,9 @@ export default class BitcoinWallet implements Partial<IWallet> {
   }
 
   private async fetchAllUtxos() {
+    if (!this.transactionDB) {
+      throw new Error('Transaction DB is required for this action');
+    }
     const key = `utxo-${this.external}`;
     const cachedUtxos: any[] | undefined = mcache.get(key);
     if (cachedUtxos) {

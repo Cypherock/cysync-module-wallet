@@ -6,7 +6,7 @@ import {
 } from '@cypherock/server-wrapper';
 import * as bip32 from 'bip32';
 import * as bitcoin from 'bitcoinjs-lib';
-import { AddressDB } from '@cypherock/database';
+import { AddressDB, TransactionDB } from '@cypherock/database';
 import crypto from 'crypto';
 
 import IWallet from '../interface/wallet';
@@ -50,6 +50,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
   segwitInternal: string;
   network: any;
   addressDB: AddressDB | undefined;
+  transactionDB: TransactionDB | undefined;
   walletId: string;
 
   constructor(
@@ -57,7 +58,8 @@ export default class BitcoinWallet implements Partial<IWallet> {
     coinType: string,
     walletId: string,
     zpub?: string,
-    addressDb?: AddressDB
+    addressDb?: AddressDB,
+    transactionDb?: TransactionDB
   ) {
     this.xpub = xpub;
     this.walletId = walletId;
@@ -77,6 +79,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     }
     this.coinType = coinType;
     this.addressDB = addressDb;
+    this.transactionDB = transactionDb;
     const hash = crypto
       .createHash('sha256')
       .update(xpub)
@@ -745,17 +748,22 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
     const txrefs = response.data || [];
 
-    txrefs.forEach((txref: any) => {
-      const utxo = {
-        address: txref.address,
-        txId: txref.txid,
-        vout: txref.vout,
-        value: parseInt(txref.value, 10),
-        block_height: txref.height,
-        confirmations: txref.confirmations
-      };
-      utxos.push(utxo);
-    });
+    await Promise.all(
+      txrefs.map(async (txref: any) => {
+        const utxo = {
+          address: txref.address,
+          txId: txref.txid,
+          vout: txref.vout,
+          value: parseInt(txref.value, 10),
+          block_height: txref.height,
+          confirmations: txref.confirmations
+        };
+        const transaction = await this.transactionDB?.getOne({
+          hash: txref.txid
+        });
+        if (!transaction?.blocked) utxos.push(utxo);
+      })
+    );
 
     return utxos;
   }
@@ -771,6 +779,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
     const utxos: any = [];
 
+    await this.transactionDB?.releaseBlockedTxns(this.coinType);
     const xUtxo = await this.fetchUtxos(this.xpub);
 
     utxos.push(...xUtxo);

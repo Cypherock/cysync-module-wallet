@@ -770,6 +770,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
         const transaction = await this.transactionDB?.getOne({
           hash: txref.txid
         });
+        // Do not use the UTXO if it has been blocked by recent pending transactions
         if (!transaction?.blocked) utxos.push(utxo);
       })
     );
@@ -791,6 +792,11 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
     const utxos: any = [];
 
+    // Release all the blocked UTXOs if the timeout has expired.
+    // This is done here so they could be reused in the current transaction
+    // if they are not included in any transaction. This also shouldn't
+    // cause any issue if the UTXO has already been used. In that case, the
+    // blockchain itself will identify it as spent.
     await this.transactionDB?.releaseBlockedTxns(this.coinType);
     const xUtxo = await this.fetchUtxos(this.xpub);
 

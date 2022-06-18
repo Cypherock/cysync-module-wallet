@@ -4,7 +4,8 @@ export enum WalletErrorType {
 }
 
 const defaultErrorMessages = {
-  [WalletErrorType.SUFFICIENT_CONFIRMED_BALANCE]: 'Sufficient confirmed balance',
+  [WalletErrorType.SUFFICIENT_CONFIRMED_BALANCE]:
+    'Sufficient confirmed balance',
   [WalletErrorType.INSUFFICIENT_FUNDS]: 'Insufficient funds in wallet'
 };
 

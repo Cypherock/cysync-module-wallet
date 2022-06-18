@@ -1,6 +1,5 @@
 import { NearCoinData } from '@cypherock/communication';
 import IWallet from '../interface/wallet';
-import { utils } from 'ethers';
 import * as nearAPI from 'near-api-js';
 import { getAccounts, getBalance,getBlockHash, getKeys } from './client';
 import { logger } from '../utils';
@@ -9,6 +8,9 @@ import { WalletError, WalletErrorType } from '../errors';
 import BN from 'bn.js';
 import BigNumber from 'bignumber.js';
 import verifyTxn from './txVerifier';
+import generateNearAddress from '../utils/generateNearAddress';
+import uint8ArrayFromHexString from '../utils/uint8ArrayFromHexString';
+import { base_decode } from 'near-api-js/lib/utils/serialize';
 
 export default class NearWallet implements IWallet {
   xpub: string;
@@ -25,18 +27,36 @@ export default class NearWallet implements IWallet {
     this.xpub = xpub;
     this.coin = coin;
     this.network = coin.network;
-    this.address = utils.HDNode.fromExtendedKey(this.xpub).publicKey;
-    this.nearPublicKey = this.coin.curve + ':' + nearAPI.utils.serialize.base_encode(this.address);
+    this.address = generateNearAddress(this.xpub);
+    this.nearPublicKey = this.coin.curve + ':' + nearAPI.utils.serialize.base_encode(uint8ArrayFromHexString(this.address));
     this.functionCallGasAmount = 1;
     this.newAccountAmount = 1;
   }
 
-  async newReceiveAddress(){
+  newReceiveAddress():string{
     return this.address;
   }
 
+  public getDerivationPath(): string {
+    const purposeIndex = '8000002c';
+    const coinIndex = this.coin.coinIndex;
+    const accountIndex = '80000000';
+    const chainIndex = '80000000';
+    const addressIndex = '80000001';//need to use this.node instead of hardcoded 80000001
+    const contractDummyPadding = '0000000000000000';
+    return (
+      purposeIndex +
+      coinIndex +
+      accountIndex +
+      chainIndex +
+      addressIndex +
+      contractDummyPadding +
+      '00'
+    );
+  }
+
   async getTotalBalance() {
-    const accounts = await getAccounts(this.address, this.coin.network);
+    const accounts = await getAccounts(this.nearPublicKey, this.coin.network);
     const balances = await Promise.all(accounts.map(async (account:any) => {
       const balance = await getBalance(account.account_id, this.coin.network);
       return balance;
@@ -53,7 +73,7 @@ export default class NearWallet implements IWallet {
 
   async generateMetaData(gasFees: number) {
     try{
-      logger.info('Generating metadata for', {
+      logger.info('Generating metadata for near', {
         address: this.address,
       });
       const purposeIndex = '8000002c';
@@ -61,10 +81,9 @@ export default class NearWallet implements IWallet {
       const accountIndex = '80000000';
 
       const inputCount = 1;
-      const chainIndex = '80000001';
-      const addressIndex = '80000001'; //could be changed to this.node
-      const inputString =
-        intToUintByte(chainIndex, 32) + intToUintByte(addressIndex, 32);
+      const chainIndex = '80000000';
+      const addressIndex = '80000001'; //could be changed to use this.node
+      const inputString = chainIndex + addressIndex;
 
       const outputCount = 1;
       const outputString = '0000000000000000';
@@ -76,7 +95,6 @@ export default class NearWallet implements IWallet {
 
       const decimalDummyPadding = intToUintByte(0, 8);
       const contractDummyPadding = '0000000000000000';
-
       return (
         purposeIndex +
         coinIndex +
@@ -111,23 +129,28 @@ export default class NearWallet implements IWallet {
     }>;
     outputs: Array<{ value: string; address: string; isMine: boolean }>;
   }> {
-    senderAddress = senderAddress || this.address;
-    const bn_amount = new BN(amount.toString());
-    const action = nearAPI.transactions.transfer(bn_amount);
-    const transaction = await this.generateTransactionAsHex(recieverAddress, [action], senderAddress);
-    return {
-      txn: transaction,
-      inputs: [
-        { address: senderAddress, value: amount.toString(), isMine: true }
-      ],
-      outputs: [
-        {
-          address: recieverAddress,
-          value: amount.toString(),
-          isMine: false,
-        }
-      ]
-    };
+    try{
+      senderAddress = senderAddress || this.address;
+      const bn_amount = new BN(amount.toString());
+      const action = nearAPI.transactions.transfer(bn_amount);
+      const transaction = await this.generateTransactionAsHex(recieverAddress, [action], senderAddress);
+      return {
+        txn: transaction,
+        inputs: [
+          { address: senderAddress, value: amount.toString(), isMine: true }
+        ],
+        outputs: [
+          {
+            address: recieverAddress,
+            value: amount.toString(),
+            isMine: false,
+          }
+        ]
+      };
+    } catch(e){
+      logger.error('Error generating unsigned transaction', e);
+      throw e;
+    }
   }
 
   public async generateDeleteAccountTransaction(
@@ -174,10 +197,11 @@ export default class NearWallet implements IWallet {
   ): Promise<string> {
     senderAddress = senderAddress || this.address;
     const blockHash = await getBlockHash(this.coin.network);
-    const keys = await getKeys(this.nearPublicKey);
-    let key:any= NaN;
+    const keys = await getKeys(senderAddress);
+    console.log(keys,this.nearPublicKey);
+    let key:any;
     for (const k of keys) {
-      if (k.publicKey === this.nearPublicKey) {
+      if (k.public_key === this.nearPublicKey) {
         key = k;
         break;
       }
@@ -189,7 +213,7 @@ export default class NearWallet implements IWallet {
     const transaction = nearAPI.transactions.createTransaction(senderAddress,
       nearAPI.utils.PublicKey.fromString(this.nearPublicKey),
       recieverAddress,nonce,
-      actions,blockHash);
+      actions,base_decode(blockHash));
     return (transaction.encode() as Buffer).toString('hex');
   }
 
@@ -199,16 +223,60 @@ export default class NearWallet implements IWallet {
     return serializedArgs;
   }
 
-  public async verifySignedTxn(){
-    return verifyTxn();
+  public async verifySignedTxn(signedTxn:string):Promise<boolean>{
+    return verifyTxn(signedTxn);
   }
 
   public getSignedTransaction(
     unsignedTransaction: string,
-    inputSignatures: string[]
+    inputSignature: string
   ): string {
     const transaction = nearAPI.transactions.Transaction.decode(Buffer.from(unsignedTransaction, 'hex'));
-    const stxn = new nearAPI.transactions.SignedTransaction({transaction: transaction, signature: inputSignatures[0]});
+    const stxn = new nearAPI.transactions.SignedTransaction({transaction: transaction,
+                  signature: new nearAPI.transactions.Signature({
+                    keyType: transaction.publicKey.keyType,
+                    data: uint8ArrayFromHexString(inputSignature)
+                  })});
     return (stxn.encode() as Buffer).toString('hex');
+  }
+
+  public async approximateTxnFee(
+    amount: BigNumber | undefined,
+    feeRate:number,
+    isSendAll?: boolean,
+  ): Promise<{ fees: BigNumber; amount: BigNumber }> {
+    logger.verbose('Approximating Txn Fee', { address: this.address });
+
+    logger.info('Approximating Txn Fee data', {
+      amount,
+      feeRate,
+      isSendAll,
+    });
+
+    let totalAmount = new BigNumber(0);
+    if (amount) {
+      totalAmount = amount;
+    }
+
+    const balance = new BigNumber((await this.getTotalBalance()).balance);
+
+    logger.info('Near balance', { balance });
+
+    // From Gwei to wei
+    const totalFee = new BigNumber(0);
+    logger.info('Total fee', { totalFee });
+
+    if (isSendAll) {
+      totalAmount = balance.minus(totalFee);
+      if (totalAmount.isNegative()) {
+        throw new WalletError(WalletErrorType.INSUFFICIENT_FUNDS);
+      }
+    }
+
+    if (balance.isLessThan(totalAmount.plus(totalFee))) {
+      throw new WalletError(WalletErrorType.INSUFFICIENT_FUNDS);
+    }
+    logger.debug('Approximating Txn Fee completed', { fee: totalFee , amount: totalAmount });
+    return { fees: totalFee, amount: totalAmount };
   }
 }

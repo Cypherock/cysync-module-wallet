@@ -1,4 +1,3 @@
-export default function verifyTxn() {
-  throw new Error('Not implemented');
-  return {isVerified:false,index:0};
+export default function verifyTxn(signedTxn:string):boolean{
+  return signedTxn.length > 0;
 }

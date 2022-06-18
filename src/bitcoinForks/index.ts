@@ -274,7 +274,13 @@ export default class BitcoinWallet implements Partial<IWallet> {
     if (!this.transactionDB) {
       throw new Error('Transaction DB is required for this action');
     }
-    const utxos: any[] = await this.fetchAllUtxos();
+    let utxosWithBlocked: any[] = await this.fetchAllUtxos();
+    // utxos excluding blocked utxos
+    const utxosFiltered = utxosWithBlocked
+      .filter(utxo => !utxo.blocked)
+      .map(({ blocked, ...rest }) => rest);
+    utxosWithBlocked = utxosWithBlocked.map(({ blocked, ...rest }) => rest);
+
     const newOutputList: Array<{ address: string; value?: number }> = [];
 
     logger.info('Generating tx data for', {
@@ -311,17 +317,51 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
     if (isSendAll) {
       ({ inputs, outputs, fee } = coinselectSplit(
-        utxos,
+        utxosFiltered,
         newOutputList,
         feeRate
       ));
     } else {
-      ({ inputs, outputs, fee } = coinselect(utxos, newOutputList, feeRate));
+      ({ inputs, outputs, fee } = coinselect(
+        utxosFiltered,
+        newOutputList,
+        feeRate
+      ));
     }
 
-    logger.info('Txn data', { inputs, outputs, fee, coin: this.coinType });
+    logger.info('Txn data: With blocked', {
+      inputs,
+      outputs,
+      fee,
+      coin: this.coinType
+    });
 
     if (!inputs || !outputs) {
+      // Check if the amount could be covered by the confirmed balance
+      if (isSendAll) {
+        ({ inputs, outputs, fee } = coinselectSplit(
+          utxosWithBlocked,
+          newOutputList,
+          feeRate
+        ));
+      } else {
+        ({ inputs, outputs, fee } = coinselect(
+          utxosWithBlocked,
+          newOutputList,
+          feeRate
+        ));
+      }
+
+      logger.info('Txn data: Without blocked', {
+        inputs,
+        outputs,
+        fee,
+        coin: this.coinType
+      });
+
+      if (inputs && outputs) {
+        throw new WalletError(WalletErrorType.SUFFICIENT_CONFIRMED_BALANCE);
+      }
       throw new WalletError(WalletErrorType.INSUFFICIENT_FUNDS);
     }
 
@@ -770,8 +810,13 @@ export default class BitcoinWallet implements Partial<IWallet> {
         const transaction = await this.transactionDB?.getOne({
           hash: txref.txid
         });
-        // Do not use the UTXO if it has been blocked by recent pending transactions
-        if (!transaction?.blocked) utxos.push(utxo);
+        // Add blocked state to utxo
+        utxos.push({
+          ...utxo,
+          blocked: Boolean(
+            transaction?.blockedInputs?.find(e => e === utxo.vout)
+          )
+        });
       })
     );
 

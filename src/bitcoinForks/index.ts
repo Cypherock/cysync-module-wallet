@@ -315,6 +315,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     let outputs;
     let fee;
 
+    // Try first with unblocked UTXOs
     if (isSendAll) {
       ({ inputs, outputs, fee } = coinselectSplit(
         utxosFiltered,
@@ -337,7 +338,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     });
 
     if (!inputs || !outputs) {
-      // Check if the amount could be covered by the confirmed balance
+      //Retry again with blocked UTXOs
       if (isSendAll) {
         ({ inputs, outputs, fee } = coinselectSplit(
           utxosWithBlocked,
@@ -359,9 +360,12 @@ export default class BitcoinWallet implements Partial<IWallet> {
         coin: this.coinType
       });
 
+      // If we get inputs and outputs then it means there is suffcient
+      // confirmed balance. So throw its respective error.
       if (inputs && outputs) {
         throw new WalletError(WalletErrorType.SUFFICIENT_CONFIRMED_BALANCE);
       }
+      // If still no inputs/outputs, then there are no insufficient funds
       throw new WalletError(WalletErrorType.INSUFFICIENT_FUNDS);
     }
 

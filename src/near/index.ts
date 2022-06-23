@@ -225,7 +225,6 @@ export default class NearWallet implements IWallet {
     senderAddress = senderAddress || this.address;
     const blockHash = await getBlockHash(this.coin.network);
     const keys = await getKeys(senderAddress);
-    console.log(keys, this.nearPublicKey);
     let key: any;
     for (const k of keys) {
       if (k.public_key === this.nearPublicKey) {

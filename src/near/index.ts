@@ -5,7 +5,7 @@ import { getAccounts, getBalance, getBlockHash, getKeys } from './client';
 import { logger } from '../utils';
 import { intToUintByte } from '../bitcoinForks/segwitHelper';
 import { WalletError, WalletErrorType } from '../errors';
-import BN from 'bn.js';
+import Web3 from 'web3';
 import BigNumber from 'bignumber.js';
 import verifyTxn from './txVerifier';
 import generateNearAddress from '../utils/generateNearAddress';
@@ -18,8 +18,8 @@ export default class NearWallet implements IWallet {
   nearPublicKey: string;
   node: number;
   network: string;
-  functionCallGasAmount: number;
-  newAccountAmount: number;
+  functionCallGasAmount: string;
+  newAccountAmount: string;
   coin: NearCoinData;
 
   constructor(xpub: string, coin: NearCoinData, node = 0) {
@@ -34,8 +34,8 @@ export default class NearWallet implements IWallet {
       nearAPI.utils.serialize.base_encode(
         uint8ArrayFromHexString(this.address)
       );
-    this.functionCallGasAmount = 1;
-    this.newAccountAmount = 1;
+    this.functionCallGasAmount = '300000000000000';
+    this.newAccountAmount = '100000000000000000000000';
   }
 
   newReceiveAddress(): string {
@@ -57,6 +57,24 @@ export default class NearWallet implements IWallet {
       addressIndex +
       contractDummyPadding +
       '00'
+    );
+  }
+
+  public getDerivationPathForCustomAccount(): string {
+    const purposeIndex = '8000002c';
+    const coinIndex = this.coin.coinIndex;
+    const accountIndex = '80000000';
+    const chainIndex = '80000000';
+    const addressIndex = '80000001'; //need to use this.node instead of hardcoded 80000001
+    const contractDummyPadding = '0000000000000000';
+    return (
+      purposeIndex +
+      coinIndex +
+      accountIndex +
+      chainIndex +
+      addressIndex +
+      contractDummyPadding +
+      '01'
     );
   }
 
@@ -141,7 +159,8 @@ export default class NearWallet implements IWallet {
   }> {
     try {
       senderAddress = senderAddress || this.address;
-      const bn_amount = new BN(amount.toString());
+      //@ts-ignore required to convert BigNumber to BN.js instance
+      const bn_amount = Web3.utils.toBN(amount);
       const action = nearAPI.transactions.transfer(bn_amount);
       const transaction = await this.generateTransactionAsHex(
         recieverAddress,
@@ -191,12 +210,21 @@ export default class NearWallet implements IWallet {
     };
   }
 
-  public async generateCreateAccountTransaction(newAccountId: string): Promise<{
+  public async generateCreateAccountTransaction(
+    newAccountId: string,
+    senderAddress?: string
+  ): Promise<{
     txn: string;
-    newAccountId: string;
+    inputs: Array<{
+      value: string;
+      address: string;
+      isMine: boolean;
+    }>;
+    outputs: Array<{ value: string; address: string; isMine: boolean }>;
   }> {
+    senderAddress = senderAddress || this.address;
     const args = {
-      nea_account_id: newAccountId,
+      new_account_id: newAccountId,
       new_public_key: this.nearPublicKey
     };
     const action = new nearAPI.transactions.Action({
@@ -204,16 +232,31 @@ export default class NearWallet implements IWallet {
         methodName: 'create_account',
         args: this.stringifyJsonOrBytes(args),
         gas: this.functionCallGasAmount,
-        attached_deposit: this.newAccountAmount
+        deposit: this.newAccountAmount
       })
     });
     const contractId = this.coin.network === 'mainnet' ? 'near' : 'testnet';
-    const transaction = await this.generateTransactionAsHex(contractId, [
-      action
-    ]);
+    const transaction = await this.generateTransactionAsHex(
+      contractId,
+      [action],
+      senderAddress
+    );
     return {
       txn: transaction,
-      newAccountId: newAccountId
+      inputs: [
+        {
+          address: senderAddress,
+          value: this.newAccountAmount.toString(),
+          isMine: true
+        }
+      ],
+      outputs: [
+        {
+          address: newAccountId,
+          value: this.newAccountAmount.toString(),
+          isMine: false
+        }
+      ]
     };
   }
 
@@ -299,7 +342,7 @@ export default class NearWallet implements IWallet {
 
     logger.info('Near balance', { balance });
 
-    const totalFee = new BigNumber(208059500000);
+    const totalFee = new BigNumber(0);
     logger.info('Total fee', { totalFee });
 
     if (isSendAll) {

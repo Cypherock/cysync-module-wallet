@@ -60,13 +60,14 @@ export default class NearWallet implements IWallet {
     );
   }
 
-  public getDerivationPathForCustomAccount(): string {
+  public getDerivationPathForCustomAccount(customAccount: string): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
     const accountIndex = '80000000';
     const chainIndex = '80000000';
     const addressIndex = '80000001'; //need to use this.node instead of hardcoded 80000001
     const contractDummyPadding = '0000000000000000';
+    const acc = Buffer.from(customAccount).toString('hex');
     return (
       purposeIndex +
       coinIndex +
@@ -74,7 +75,8 @@ export default class NearWallet implements IWallet {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      '01'
+      '01' +
+      acc.padEnd(66, '0')
     );
   }
 

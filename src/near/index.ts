@@ -123,7 +123,7 @@ export default class NearWallet implements IWallet {
 
       const gas = intToUintByte(gasFees, 32);
 
-      const decimalDummyPadding = intToUintByte(0, 8);
+      const decimal = intToUintByte(this.coin.decimal, 8);
       const contractDummyPadding = '0000000000000000';
       return (
         purposeIndex +
@@ -136,7 +136,7 @@ export default class NearWallet implements IWallet {
         intToUintByte(changeCount, 8) +
         changeString +
         gas +
-        decimalDummyPadding +
+        decimal +
         contractDummyPadding +
         intToUintByte(0, 8)
       );

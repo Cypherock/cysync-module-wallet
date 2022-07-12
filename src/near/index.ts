@@ -80,7 +80,7 @@ export default class NearWallet implements IWallet {
     );
   }
 
-  async getTotalBalance() {
+  async getTotalBalanceLinked() {
     const accounts = await getAccounts(this.nearPublicKey, this.coin.network);
     const balances = await Promise.all(
       accounts.map(async (account: any) => {
@@ -95,6 +95,20 @@ export default class NearWallet implements IWallet {
     return {
       balance: totalBalance
     };
+  }
+
+  async getTotalBalance() {
+    const balance = await getBalance(this.nearPublicKey, this.coin.network);
+    return { balance: balance };
+  }
+
+  async getTotalBalanceCustom(account?: string) {
+    const balance = await getBalance(
+      account ? account : this.nearPublicKey,
+      this.coin.network
+    );
+    console.log(balance, account);
+    return { balance: balance };
   }
 
   async setupNewWallet() {
@@ -325,7 +339,8 @@ export default class NearWallet implements IWallet {
   public async approximateTxnFee(
     amount: BigNumber | undefined,
     feeRate: number,
-    isSendAll?: boolean
+    isSendAll?: boolean,
+    customAccount?: string
   ): Promise<{ fees: BigNumber; amount: BigNumber }> {
     logger.verbose('Approximating Txn Fee', { address: this.address });
 
@@ -340,7 +355,10 @@ export default class NearWallet implements IWallet {
       totalAmount = amount;
     }
 
-    const balance = new BigNumber((await this.getTotalBalance()).balance);
+    const balance = new BigNumber(
+      (await this.getTotalBalanceCustom(customAccount)).balance
+    );
+    console.log(balance);
 
     logger.info('Near balance', { balance });
 

@@ -104,10 +104,9 @@ export default class NearWallet implements IWallet {
 
   async getTotalBalanceCustom(account?: string) {
     const balance = await getBalance(
-      account ? account : this.nearPublicKey,
+      account ? account : this.address,
       this.coin.network
     );
-    console.log(balance, account);
     return { balance: balance };
   }
 
@@ -135,10 +134,11 @@ export default class NearWallet implements IWallet {
       const changeCount = 1;
       const changeString = '0000000000000000';
 
-      const gas = intToUintByte(gasFees, 32);
+      const gas = intToUintByte(0, 32);
 
       const decimal = intToUintByte(this.coin.decimal, 8);
-      const contractDummyPadding = '0000000000000000';
+      const contractDummyPadding = intToUintByte(gasFees / 10000, 16 * 4); //changing decimal to fit the size only until protobuff
+      console.log(gas, gasFees);
       return (
         purposeIndex +
         coinIndex +
@@ -358,11 +358,10 @@ export default class NearWallet implements IWallet {
     const balance = new BigNumber(
       (await this.getTotalBalanceCustom(customAccount)).balance
     );
-    console.log(balance);
 
     logger.info('Near balance', { balance });
 
-    const totalFee = new BigNumber(0);
+    const totalFee = new BigNumber(feeRate);
     logger.info('Total fee', { totalFee });
 
     if (isSendAll) {

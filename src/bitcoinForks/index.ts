@@ -6,7 +6,7 @@ import {
 } from '@cypherock/server-wrapper';
 import * as bip32 from 'bip32';
 import * as bitcoin from 'bitcoinjs-lib';
-import { AddressDB } from '@cypherock/database';
+import { AddressDB, TransactionDB } from '@cypherock/database';
 import crypto from 'crypto';
 
 import IWallet from '../interface/wallet';
@@ -50,15 +50,19 @@ export default class BitcoinWallet implements Partial<IWallet> {
   segwitInternal: string;
   network: any;
   addressDB: AddressDB | undefined;
+  transactionDB: TransactionDB | undefined;
   walletId: string;
 
-  constructor(
-    xpub: string,
-    coinType: string,
-    walletId: string,
-    zpub?: string,
-    addressDb?: AddressDB
-  ) {
+  constructor(options: {
+    xpub: string;
+    coinType: string;
+    walletId: string;
+    zpub?: string;
+    addressDb?: AddressDB;
+    transactionDb?: TransactionDB;
+  }) {
+    const { xpub, walletId, coinType, zpub, addressDb, transactionDb } =
+      options;
     this.xpub = xpub;
     this.walletId = walletId;
     this.segwitExternal = '';
@@ -77,6 +81,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     }
     this.coinType = coinType;
     this.addressDB = addressDb;
+    this.transactionDB = transactionDb;
     const hash = crypto
       .createHash('sha256')
       .update(xpub)
@@ -265,7 +270,17 @@ export default class BitcoinWallet implements Partial<IWallet> {
     feeRate: any,
     isSendAll?: boolean
   ): Promise<{ inputs: any; outputs: any; fee: any }> {
-    const utxos: any[] = await this.fetchAllUtxos();
+    // This is because we need block state of UTXOs
+    if (!this.transactionDB) {
+      throw new Error('Transaction DB is required for this action');
+    }
+    let utxosWithBlocked: any[] = await this.fetchAllUtxos();
+    // utxos excluding blocked utxos
+    const utxosFiltered = utxosWithBlocked
+      .filter(utxo => !utxo.blocked)
+      .map(({ blocked, ...rest }) => rest);
+    utxosWithBlocked = utxosWithBlocked.map(({ blocked, ...rest }) => rest);
+
     const newOutputList: Array<{ address: string; value?: number }> = [];
 
     logger.info('Generating tx data for', {
@@ -300,19 +315,57 @@ export default class BitcoinWallet implements Partial<IWallet> {
     let outputs;
     let fee;
 
+    // Try first with unblocked UTXOs
     if (isSendAll) {
       ({ inputs, outputs, fee } = coinselectSplit(
-        utxos,
+        utxosFiltered,
         newOutputList,
         feeRate
       ));
     } else {
-      ({ inputs, outputs, fee } = coinselect(utxos, newOutputList, feeRate));
+      ({ inputs, outputs, fee } = coinselect(
+        utxosFiltered,
+        newOutputList,
+        feeRate
+      ));
     }
 
-    logger.info('Txn data', { inputs, outputs, fee, coin: this.coinType });
+    logger.info('Txn data: With blocked', {
+      inputs,
+      outputs,
+      fee,
+      coin: this.coinType
+    });
 
     if (!inputs || !outputs) {
+      //Retry again with blocked UTXOs
+      if (isSendAll) {
+        ({ inputs, outputs, fee } = coinselectSplit(
+          utxosWithBlocked,
+          newOutputList,
+          feeRate
+        ));
+      } else {
+        ({ inputs, outputs, fee } = coinselect(
+          utxosWithBlocked,
+          newOutputList,
+          feeRate
+        ));
+      }
+
+      logger.info('Txn data: Without blocked', {
+        inputs,
+        outputs,
+        fee,
+        coin: this.coinType
+      });
+
+      // If we get inputs and outputs then it means there is suffcient
+      // confirmed balance. So throw its respective error.
+      if (inputs && outputs) {
+        throw new WalletError(WalletErrorType.SUFFICIENT_CONFIRMED_BALANCE);
+      }
+      // If still no inputs/outputs, then there are no insufficient funds
       throw new WalletError(WalletErrorType.INSUFFICIENT_FUNDS);
     }
 
@@ -734,6 +787,9 @@ export default class BitcoinWallet implements Partial<IWallet> {
   }
 
   private async fetchUtxos(xpub: string) {
+    if (!this.transactionDB) {
+      throw new Error('Transaction DB is required for this action');
+    }
     const utxos: any = [];
 
     const response: AxiosResponse = await v2Server
@@ -745,22 +801,36 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
     const txrefs = response.data || [];
 
-    txrefs.forEach((txref: any) => {
-      const utxo = {
-        address: txref.address,
-        txId: txref.txid,
-        vout: txref.vout,
-        value: parseInt(txref.value, 10),
-        block_height: txref.height,
-        confirmations: txref.confirmations
-      };
-      utxos.push(utxo);
-    });
+    await Promise.all(
+      txrefs.map(async (txref: any) => {
+        const utxo = {
+          address: txref.address,
+          txId: txref.txid,
+          vout: txref.vout,
+          value: parseInt(txref.value, 10),
+          block_height: txref.height,
+          confirmations: txref.confirmations
+        };
+        const transaction = await this.transactionDB?.getOne({
+          hash: txref.txid
+        });
+        // Add blocked state to utxo
+        utxos.push({
+          ...utxo,
+          blocked: Boolean(
+            transaction?.blockedInputs?.find(e => e === utxo.vout)
+          )
+        });
+      })
+    );
 
     return utxos;
   }
 
   private async fetchAllUtxos() {
+    if (!this.transactionDB) {
+      throw new Error('Transaction DB is required for this action');
+    }
     const key = `utxo-${this.external}`;
     const cachedUtxos: any[] | undefined = mcache.get(key);
     if (cachedUtxos) {
@@ -771,6 +841,12 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
     const utxos: any = [];
 
+    // Release all the blocked UTXOs if the timeout has expired.
+    // This is done here so they could be reused in the current transaction
+    // if they are not included in any transaction. This also shouldn't
+    // cause any issue if the UTXO has already been used. In that case, the
+    // blockchain itself will identify it as spent.
+    await this.transactionDB?.releaseBlockedTxns(this.coinType);
     const xUtxo = await this.fetchUtxos(this.xpub);
 
     utxos.push(...xUtxo);

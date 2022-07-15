@@ -114,7 +114,7 @@ export default class NearWallet implements IWallet {
     // do nothing
   }
 
-  async generateMetaData(gasFees: number) {
+  async generateMetaData(gasFees: number, addAccount?: boolean) {
     try {
       logger.info('Generating metadata for near', {
         address: this.address
@@ -137,8 +137,7 @@ export default class NearWallet implements IWallet {
       const gas = intToUintByte(0, 32);
 
       const decimal = intToUintByte(this.coin.decimal, 8);
-      const contractDummyPadding = intToUintByte(gasFees / 10000, 16 * 4); //changing decimal to fit the size only until protobuff
-      console.log(gas, gasFees);
+      const contractDummyPadding = intToUintByte(Math.round(gasFees / 10000), 16 * 4); //changing decimal to fit the size only until protobuff
       return (
         purposeIndex +
         coinIndex +
@@ -152,7 +151,7 @@ export default class NearWallet implements IWallet {
         gas +
         decimal +
         contractDummyPadding +
-        intToUintByte(0, 8)
+        (addAccount ? intToUintByte(1, 8) : intToUintByte(0, 8))
       );
     } catch (e) {
       logger.error('Error generating metadata', e);

@@ -833,13 +833,6 @@ export default class BitcoinWallet implements Partial<IWallet> {
     }
     const key = `utxo-${this.external}`;
     const cachedUtxos: any[] | undefined = mcache.get(key);
-    if (cachedUtxos) {
-      logger.info('UTXO from cache', { coin: this.coinType });
-      logger.debug('UTXO from cache', { cachedUtxos, coin: this.coinType });
-      return cachedUtxos;
-    }
-
-    const utxos: any = [];
 
     // Release all the blocked UTXOs if the timeout has expired.
     // This is done here so they could be reused in the current transaction
@@ -847,6 +840,34 @@ export default class BitcoinWallet implements Partial<IWallet> {
     // cause any issue if the UTXO has already been used. In that case, the
     // blockchain itself will identify it as spent.
     await this.transactionDB?.releaseBlockedTxns(this.coinType);
+
+    if (cachedUtxos) {
+      const processedUtxos: any[] = [];
+
+      await Promise.all(
+        cachedUtxos.map(async utxo => {
+          const transaction = await this.transactionDB?.getOne({
+            hash: utxo.txId
+          });
+          // Add blocked state to utxo
+          processedUtxos.push({
+            ...utxo,
+            blocked: Boolean(
+              transaction?.blockedInputs?.find(e => e === utxo.vout)
+            )
+          });
+        })
+      );
+      logger.info('UTXO from cache', { coin: this.coinType });
+
+      logger.debug('UTXO from cache', {
+        cachedUtxos: processedUtxos,
+        coin: this.coinType
+      });
+      return processedUtxos;
+    }
+
+    const utxos: any = [];
     const xUtxo = await this.fetchUtxos(this.xpub);
 
     utxos.push(...xUtxo);

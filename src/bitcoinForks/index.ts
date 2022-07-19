@@ -363,7 +363,9 @@ export default class BitcoinWallet implements Partial<IWallet> {
       // If we get inputs and outputs then it means there is suffcient
       // confirmed balance. So throw its respective error.
       if (inputs && outputs) {
-        throw new WalletError(WalletErrorType.SUFFICIENT_CONFIRMED_BALANCE);
+        throw new WalletError(
+          WalletErrorType.BLOCKED_UTXOS_WITH_SUFFICIENT_BALANCE
+        );
       }
       // If still no inputs/outputs, then there are no insufficient funds
       throw new WalletError(WalletErrorType.INSUFFICIENT_FUNDS);

@@ -99,7 +99,7 @@ export default class NearWallet implements IWallet {
 
   async getTotalBalance() {
     const balance = await getBalance(this.nearPublicKey, this.coin.network);
-    return { balance: balance };
+    return { balance };
   }
 
   async getTotalBalanceCustom(account?: string) {
@@ -107,7 +107,7 @@ export default class NearWallet implements IWallet {
       account ? account : this.address,
       this.coin.network
     );
-    return { balance: balance };
+    return { balance };
   }
 
   async setupNewWallet() {
@@ -137,7 +137,10 @@ export default class NearWallet implements IWallet {
       const gas = intToUintByte(0, 32);
 
       const decimal = intToUintByte(this.coin.decimal, 8);
-      const contractDummyPadding = intToUintByte(Math.round(gasFees / 10000), 16 * 4); //changing decimal to fit the size only until protobuff
+      const contractDummyPadding = intToUintByte(
+        Math.round(gasFees / 10000),
+        16 * 4
+      ); //changing decimal to fit the size only until protobuff
       return (
         purposeIndex +
         coinIndex +
@@ -162,7 +165,7 @@ export default class NearWallet implements IWallet {
   async generateUnsignedTransaction(
     recieverAddress: string,
     amount: BigNumber,
-    senderAddress?: string
+    senderAddressArg?: string
   ): Promise<{
     txn: string;
     inputs: Array<{
@@ -173,10 +176,10 @@ export default class NearWallet implements IWallet {
     outputs: Array<{ value: string; address: string; isMine: boolean }>;
   }> {
     try {
-      senderAddress = senderAddress || this.address;
+      const senderAddress = senderAddressArg || this.address;
       //@ts-ignore required to convert BigNumber to BN.js instance
-      const bn_amount = Web3.utils.toBN(amount);
-      const action = nearAPI.transactions.transfer(bn_amount);
+      const bnAmount = Web3.utils.toBN(amount);
+      const action = nearAPI.transactions.transfer(bnAmount);
       const transaction = await this.generateTransactionAsHex(
         recieverAddress,
         [action],
@@ -203,12 +206,12 @@ export default class NearWallet implements IWallet {
 
   public async generateDeleteAccountTransaction(
     benificiaryAddress: string,
-    senderAddress?: string
+    senderAddressArg?: string
   ): Promise<{
     txn: string;
     benificiary: string;
   }> {
-    senderAddress = senderAddress || this.address;
+    const senderAddress = senderAddressArg || this.address;
     const action = new nearAPI.transactions.Action({
       deleteAccount: new nearAPI.transactions.DeleteAccount({
         benificiaryAddress
@@ -227,7 +230,7 @@ export default class NearWallet implements IWallet {
 
   public async generateCreateAccountTransaction(
     newAccountId: string,
-    senderAddress?: string
+    senderAddressArg?: string
   ): Promise<{
     txn: string;
     inputs: Array<{
@@ -237,7 +240,7 @@ export default class NearWallet implements IWallet {
     }>;
     outputs: Array<{ value: string; address: string; isMine: boolean }>;
   }> {
-    senderAddress = senderAddress || this.address;
+    const senderAddress = senderAddressArg || this.address;
     const args = {
       new_account_id: newAccountId,
       new_public_key: this.nearPublicKey
@@ -278,9 +281,9 @@ export default class NearWallet implements IWallet {
   async generateTransactionAsHex(
     recieverAddress: string,
     actions: nearAPI.transactions.Action[],
-    senderAddress?: string
+    senderAddressArg?: string
   ): Promise<string> {
-    senderAddress = senderAddress || this.address;
+    const senderAddress = senderAddressArg || this.address;
     const blockHash = await getBlockHash(this.coin.network);
     const keys = await getKeys(senderAddress);
     let key: any;
@@ -326,7 +329,7 @@ export default class NearWallet implements IWallet {
       Buffer.from(unsignedTransaction, 'hex')
     );
     const stxn = new nearAPI.transactions.SignedTransaction({
-      transaction: transaction,
+      transaction,
       signature: new nearAPI.transactions.Signature({
         keyType: transaction.publicKey.keyType,
         data: uint8ArrayFromHexString(inputSignature)

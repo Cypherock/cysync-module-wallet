@@ -16,14 +16,12 @@ export default class NearWallet implements IWallet {
   xpub: string;
   address: string;
   nearPublicKey: string;
-  node: number;
   network: string;
   functionCallGasAmount: string;
   newAccountAmount: string;
   coin: NearCoinData;
 
-  constructor(xpub: string, coin: NearCoinData, node = 0) {
-    this.node = node;
+  constructor(xpub: string, coin: NearCoinData) {
     this.xpub = xpub;
     this.coin = coin;
     this.network = coin.network;
@@ -47,7 +45,7 @@ export default class NearWallet implements IWallet {
     const coinIndex = this.coin.coinIndex;
     const accountIndex = '80000000';
     const chainIndex = '80000000';
-    const addressIndex = '80000001'; //need to use this.node instead of hardcoded 80000001
+    const addressIndex = '80000001';
     const contractDummyPadding = '0000000000000000';
     return (
       purposeIndex +
@@ -65,7 +63,7 @@ export default class NearWallet implements IWallet {
     const coinIndex = this.coin.coinIndex;
     const accountIndex = '80000000';
     const chainIndex = '80000000';
-    const addressIndex = '80000001'; //need to use this.node instead of hardcoded 80000001
+    const addressIndex = '80000001';
     const contractDummyPadding = '0000000000000000';
     const acc = Buffer.from(customAccount).toString('hex');
     return (
@@ -125,7 +123,7 @@ export default class NearWallet implements IWallet {
 
       const inputCount = 1;
       const chainIndex = '80000000';
-      const addressIndex = '80000001'; //could be changed to use this.node
+      const addressIndex = '80000001';
       const inputString = chainIndex + addressIndex;
 
       const outputCount = 1;
@@ -318,7 +316,7 @@ export default class NearWallet implements IWallet {
   }
 
   public async verifySignedTxn(signedTxn: string): Promise<boolean> {
-    return verifyTxn(signedTxn);
+    return verifyTxn(signedTxn, this.nearPublicKey);
   }
 
   public getSignedTransaction(

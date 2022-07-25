@@ -5,7 +5,7 @@ export enum WalletErrorType {
 
 const defaultErrorMessages = {
   [WalletErrorType.BLOCKED_UTXOS_WITH_SUFFICIENT_BALANCE]:
-    'Sufficient confirmed balance',
+    'Blocked UTXOs present with sufficient balance',
   [WalletErrorType.INSUFFICIENT_FUNDS]: 'Insufficient funds in wallet'
 };
 

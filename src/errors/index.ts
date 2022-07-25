@@ -1,11 +1,11 @@
 export enum WalletErrorType {
-  SUFFICIENT_CONFIRMED_BALANCE = 'DS_OPTS_1011',
+  BLOCKED_UTXOS_WITH_SUFFICIENT_BALANCE = 'DS_OPTS_1011',
   INSUFFICIENT_FUNDS = 'DS_OPTS_1010'
 }
 
 const defaultErrorMessages = {
-  [WalletErrorType.SUFFICIENT_CONFIRMED_BALANCE]:
-    'Sufficient confirmed balance',
+  [WalletErrorType.BLOCKED_UTXOS_WITH_SUFFICIENT_BALANCE]:
+    'Blocked UTXOs present with sufficient balance',
   [WalletErrorType.INSUFFICIENT_FUNDS]: 'Insufficient funds in wallet'
 };
 

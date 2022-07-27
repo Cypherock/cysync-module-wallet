@@ -33,22 +33,22 @@
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
-"@cypherock/communication@3.0.1-beta.23":
-  version "3.0.1-beta.23"
-  resolved "https://registry.yarnpkg.com/@cypherock/communication/-/communication-3.0.1-beta.23.tgz#1e90fbfbbe7c940c147faef13c552720848795ed"
-  integrity sha512-blzx8ZyJAwNF1FwPXRHzvaEAI3MWc+q3KCCp4Dv14YulBhIT+IT38tGDYQJIuEJK3vLF5x1V0KzO7W3qFLfETg==
+"@cypherock/communication@3.0.1-beta.24":
+  version "3.0.1-beta.24"
+  resolved "https://registry.yarnpkg.com/@cypherock/communication/-/communication-3.0.1-beta.24.tgz#c6c82d295d272a6faf5c77ede7c32bf6405e854c"
+  integrity sha512-ZWhji5xTykMQx6gkXaX48YaNtBMZ1sr3uKXCeC3Y8MnMWMShOy78tGbeQbAgp+FZ2d0XchaEcsYyVQ/5aHl5KQ==
   dependencies:
     compare-versions "^4.1.3"
     serialport "10.0.0"
     uuid "^8.3.2"
     winston "^3.5.1"
 
-"@cypherock/database@3.0.1-beta.30":
-  version "3.0.1-beta.30"
-  resolved "https://registry.yarnpkg.com/@cypherock/database/-/database-3.0.1-beta.30.tgz#e0c48a21a52fff779941537d7837fded7e277c72"
-  integrity sha512-sbv74XkzEYhN6LW4vG4VneqDPonCZlpz/TyGf7UFp1Fo9KN4V0Sfttc15vNbGKVCxqlFD9PEPfqJWmfEKCVNMg==
+"@cypherock/database@3.0.1-beta.31":
+  version "3.0.1-beta.31"
+  resolved "https://registry.yarnpkg.com/@cypherock/database/-/database-3.0.1-beta.31.tgz#abf6abb7d00bc9fd70c2abbe9e8c719adf87dddf"
+  integrity sha512-aodvvl7K9XD2LDmByERgIMitD9s4cV+X7z9eUVZHGOiJInL+iu7q32GkoLgLlVoApmC6GJ3ArGzg7mwIP5x8qA==
   dependencies:
-    "@cypherock/communication" "3.0.1-beta.23"
+    "@cypherock/communication" "3.0.1-beta.24"
     "@types/bignumber.js" "^5.0.0"
     "@types/pouchdb" "^6.4.0"
     "@types/pouchdb-adapter-websql" "^6.1.4"
@@ -68,10 +68,10 @@
     transform-pouch "^2.0.0"
     winston "^3.6.0"
 
-"@cypherock/server-wrapper@1.0.1-beta.16":
-  version "1.0.1-beta.16"
-  resolved "https://registry.yarnpkg.com/@cypherock/server-wrapper/-/server-wrapper-1.0.1-beta.16.tgz#daa7382abcb84e2e8a67c8b0fc2fde9ade75242d"
-  integrity sha512-rDUAe1Iwcesgk9n5S4neKjkOfO7xFrEFv+7vRyA3OelTeCk3OAJnBG25oBXTliq58wAkjMlpfHpakOq+aqxAtg==
+"@cypherock/server-wrapper@1.0.1-beta.17":
+  version "1.0.1-beta.17"
+  resolved "https://registry.yarnpkg.com/@cypherock/server-wrapper/-/server-wrapper-1.0.1-beta.17.tgz#8d483eb56390a2ab3f311cc4f5369e98bb504d77"
+  integrity sha512-OI64uwHrZbcjEI1dXBbzGxuk95sRU/LIZ1jenC+3hVw/fyTwLupNGvzZiTJCD1PTgBWrYr21PUiKAneDTIyfaQ==
   dependencies:
     axios "^0.25.0"
     node-cache "^5.1.2"

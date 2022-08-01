@@ -165,13 +165,11 @@ export default class EthereumWallet implements IWallet {
   }
 
   async generateMetaData(
-    gasFees: number,
     contractAddress?: string,
     contractAbbr?: string
   ): Promise<string> {
     logger.info('Generating metadata for', {
       address: this.address,
-      gasFees,
       contractAddress,
       contractAbbr
     });
@@ -191,7 +189,8 @@ export default class EthereumWallet implements IWallet {
     const changeCount = 1;
     const changeString = '0000000000000000';
 
-    const gas = intToUintByte(gasFees, 32);
+    // this field is not used on the device, the transaction fees is calculated from the unsigned txn
+    const gas = intToUintByte(0, 32);
 
     let decimal = intToUintByte(18, 8);
     if (contractAddress)

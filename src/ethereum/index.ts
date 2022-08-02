@@ -266,7 +266,10 @@ export default class EthereumWallet implements IWallet {
     logger.verbose('Generating unsignedTxn', { address: this.address });
 
     const ethBalance = new BigNumber((await this.getTotalBalance()).balance);
-    logger.info('Eth balance', { ethBalance, address: this.address });
+    logger.info('Eth balance', {
+      ethBalance: ethBalance.toString(),
+      address: this.address
+    });
 
     // From Gwei to wei
     const totalFee = new BigNumber(gasPrice * gasLimit).multipliedBy(
@@ -362,9 +365,11 @@ export default class EthereumWallet implements IWallet {
 
   async getTotalBalance(contractAddress?: string) {
     // to keep in sync with bitcoin's balance structure in the db
-    return {
+    const bal = {
       balance: await getBalance(this.address, this.network, contractAddress)
     };
+
+    return bal;
   }
 
   newReceiveAddress(): string {

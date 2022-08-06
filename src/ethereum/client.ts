@@ -8,10 +8,11 @@ export const getTransactionCount = async (
   return eth.wallet
     .getTxnCount({
       address,
-      network
+      network,
+      responseType: 'v2'
     })
     .request()
-    .then((res: AxiosResponse) => res.data);
+    .then((res: AxiosResponse) => res.data.count);
 };
 
 export const getBalance = async (
@@ -23,18 +24,22 @@ export const getBalance = async (
     .getBalance({
       address,
       network,
-      contractAddress
+      contractAddress,
+      responseType: 'v2'
     })
     .request()
-    .then((res: AxiosResponse) => res.data);
+    .then((res: AxiosResponse) => {
+      return res.data.balance;
+    });
 };
 
 export const getDecimal = async (network = 'main', contractAddress: string) => {
   return eth.wallet
     .getContractDecimal({
       network,
-      contractAddress
+      contractAddress,
+      responseType: 'v2'
     })
     .request()
-    .then(res => res.data);
+    .then(res => res.data.decimal);
 };

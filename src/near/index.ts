@@ -163,6 +163,8 @@ export default class NearWallet implements IWallet {
   async generateUnsignedTransaction(
     recieverAddress: string,
     amount: BigNumber,
+    isSendAll: boolean,
+    transactionFee: BigNumber,
     senderAddressArg?: string
   ): Promise<{
     txn: string;
@@ -175,8 +177,18 @@ export default class NearWallet implements IWallet {
   }> {
     try {
       const senderAddress = senderAddressArg || this.address;
+      let totalAmount = amount;
+      if (isSendAll) {
+        const balance = new BigNumber(
+          (await this.getTotalBalanceCustom(senderAddress)).balance
+        );
+        totalAmount = balance.minus(transactionFee);
+        if (totalAmount.isNegative()) {
+          throw new WalletError(WalletErrorType.INSUFFICIENT_FUNDS);
+        }
+      }
       //@ts-ignore required to convert BigNumber to BN.js instance
-      const bnAmount = Web3.utils.toBN(amount);
+      const bnAmount = Web3.utils.toBN(totalAmount);
       const action = nearAPI.transactions.transfer(bnAmount);
       const transaction = await this.generateTransactionAsHex(
         recieverAddress,
@@ -186,12 +198,16 @@ export default class NearWallet implements IWallet {
       return {
         txn: transaction,
         inputs: [
-          { address: senderAddress, value: amount.toString(), isMine: true }
+          {
+            address: senderAddress,
+            value: totalAmount.toString(),
+            isMine: true
+          }
         ],
         outputs: [
           {
             address: recieverAddress,
-            value: amount.toString(),
+            value: totalAmount.toString(),
             isMine: false
           }
         ]

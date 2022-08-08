@@ -828,9 +828,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
         // Add blocked state to utxo
         utxos.push({
           ...utxo,
-          blocked: Boolean(
-            transaction?.blockedInputs?.find(e => e === utxo.vout)
-          )
+          blocked: transaction?.blockedInputs?.includes(utxo.vout)
         });
       })
     );
@@ -863,9 +861,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
           // Add blocked state to utxo
           processedUtxos.push({
             ...utxo,
-            blocked: Boolean(
-              transaction?.blockedInputs?.find(e => e === utxo.vout)
-            )
+            blocked: transaction?.blockedInputs?.includes(utxo.vout)
           });
         })
       );

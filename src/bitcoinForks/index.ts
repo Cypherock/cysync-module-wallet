@@ -626,7 +626,6 @@ export default class BitcoinWallet implements Partial<IWallet> {
       .request();
 
     if (xResp.data.tokens && xResp.data.tokens.length > 0) {
-      const addressDbList = [];
       for (const token of xResp.data.tokens) {
         const { name: address, path, type } = token;
         if (type !== 'XPUBAddress') {
@@ -637,7 +636,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
         const chainIndex = parseInt(pathArr[pathArr.length - 2], 10);
         const addressIndex = parseInt(pathArr[pathArr.length - 1], 10);
 
-        addressDbList.push({
+        await this.addressDB.insert({
           address,
           walletId: this.walletId,
           coinType: this.coinType,
@@ -646,7 +645,6 @@ export default class BitcoinWallet implements Partial<IWallet> {
           isSegwit: false
         });
       }
-      await this.addressDB.insertMany(addressDbList);
     }
 
     if (this.zpub) {
@@ -658,7 +656,6 @@ export default class BitcoinWallet implements Partial<IWallet> {
         .request();
 
       if (zResp.data.tokens && zResp.data.tokens.length > 0) {
-        const addressDbList = [];
         for (const token of zResp.data.tokens) {
           const { name: address, path, type } = token;
           if (type !== 'XPUBAddress') {
@@ -669,7 +666,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
           const chainIndex = parseInt(pathArr[pathArr.length - 2], 10);
           const addressIndex = parseInt(pathArr[pathArr.length - 1], 10);
 
-          addressDbList.push({
+          await this.addressDB.insert({
             address,
             coinType: this.coinType,
             walletId: this.walletId,
@@ -678,7 +675,6 @@ export default class BitcoinWallet implements Partial<IWallet> {
             isSegwit: true
           });
         }
-        await this.addressDB.insertMany(addressDbList);
       }
     }
   }
@@ -755,8 +751,6 @@ export default class BitcoinWallet implements Partial<IWallet> {
       return data;
     }
 
-    const addressDbList = [];
-
     for (const token of resp.data.tokens) {
       const { name: address, path, type } = token;
 
@@ -769,15 +763,15 @@ export default class BitcoinWallet implements Partial<IWallet> {
       const addressIndex = parseInt(pathArr[pathArr.length - 1], 10);
 
       if (this.addressDB) {
+        await this.addressDB.insert({
+          address,
+          walletId: this.walletId,
+          coinType: this.coinType,
+          chainIndex,
+          addressIndex,
+          isSegwit
+        });
       }
-      addressDbList.push({
-        address,
-        walletId: this.walletId,
-        coinType: this.coinType,
-        chainIndex,
-        addressIndex,
-        isSegwit
-      });
 
       const addressData = {
         addressIndex,
@@ -789,9 +783,6 @@ export default class BitcoinWallet implements Partial<IWallet> {
       } else if (chainIndex === 1) {
         data.cChain.push(addressData);
       }
-    }
-    if (this.addressDB) {
-      await this.addressDB.insertMany(addressDbList);
     }
 
     return data;

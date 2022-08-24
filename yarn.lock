@@ -70,10 +70,10 @@
     transform-pouch "^2.0.0"
     winston "^3.6.0"
 
-"@cypherock/server-wrapper@1.0.1-beta.19":
-  version "1.0.1-beta.19"
-  resolved "https://registry.yarnpkg.com/@cypherock/server-wrapper/-/server-wrapper-1.0.1-beta.19.tgz#29e8650004e047a4d5871ec19b4276328e684333"
-  integrity sha512-cOxAOOzhuYcM2YYVU7jame7iXaq/SZNSCPvzFyPF7zxRwo4oKTsXxGllm3UivmP589qHD2k0PFl1tpMaT2eekA==
+"@cypherock/server-wrapper@1.0.1-beta.20":
+  version "1.0.1-beta.20"
+  resolved "https://registry.yarnpkg.com/@cypherock/server-wrapper/-/server-wrapper-1.0.1-beta.20.tgz#f8f9a98fddbbf3cb9b12297c42951c159b06c2aa"
+  integrity sha512-JmW4E7r4cYZ+13A/ObQ9ewOwoYpWXpOTlEu4W3E7ETbDwnnlXhesmYwOpmaFFb4ZYRmZqXw+Us0RXcNop1+X6g==
   dependencies:
     axios "^0.25.0"
     node-cache "^5.1.2"

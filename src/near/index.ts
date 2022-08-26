@@ -1,4 +1,4 @@
-import { NearCoinData } from '@cypherock/communication';
+import { FeatureName, NearCoinData } from '@cypherock/communication';
 import IWallet from '../interface/wallet';
 import * as nearAPI from 'near-api-js';
 import { getAccounts, getBalance, getBlockHash, getKeys } from './client';
@@ -40,13 +40,18 @@ export default class NearWallet implements IWallet {
     return this.address;
   }
 
-  public getDerivationPath(): string {
+  public getDerivationPath(feature: FeatureName): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
     const accountIndex = '80000000';
     const chainIndex = '80000000';
     const addressIndex = '80000001';
-    const contractDummyPadding = '0000000000000000';
+
+    let contractDummyPadding;
+    if (feature === FeatureName.TokenNameRestructure)
+      contractDummyPadding = '00';
+    else contractDummyPadding = '0000000000000000';
+
     return (
       purposeIndex +
       coinIndex +
@@ -58,13 +63,21 @@ export default class NearWallet implements IWallet {
     );
   }
 
-  public getDerivationPathForCustomAccount(customAccount: string): string {
+  public getDerivationPathForCustomAccount(
+    customAccount: string,
+    feature: FeatureName
+  ): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
     const accountIndex = '80000000';
     const chainIndex = '80000000';
     const addressIndex = '80000001';
-    const contractDummyPadding = '0000000000000000';
+
+    let contractDummyPadding;
+    if (feature === FeatureName.TokenNameRestructure)
+      contractDummyPadding = '00';
+    else contractDummyPadding = '0000000000000000';
+
     const acc = Buffer.from(customAccount).toString('hex');
     return (
       purposeIndex +
@@ -112,7 +125,11 @@ export default class NearWallet implements IWallet {
     // do nothing
   }
 
-  async generateMetaData(gasFees: number, addAccount?: boolean) {
+  async generateMetaData(
+    gasFees: number,
+    feature: FeatureName,
+    addAccount?: boolean
+  ) {
     try {
       logger.info('Generating metadata for near', {
         address: this.address
@@ -131,14 +148,24 @@ export default class NearWallet implements IWallet {
 
       const changeCount = 1;
       const changeString = '0000000000000000';
-
-      const gas = intToUintByte(0, 32);
-
       const decimal = intToUintByte(this.coin.decimal, 8);
-      const contractDummyPadding = intToUintByte(
-        Math.round(gasFees / 10000),
-        16 * 4
-      ); //changing decimal to fit the size only until protobuff
+
+      let transactionFees;
+      let contractDummyPadding;
+      if (feature === FeatureName.TokenNameRestructure) {
+      } else {
+        contractDummyPadding = '0000000000000000';
+      }
+      if (feature === FeatureName.TokenNameRestructure) {
+        contractDummyPadding = '00';
+        transactionFees = intToUintByte(Math.round(gasFees / 10000), 16 * 8);
+      } else {
+        transactionFees = intToUintByte(0, 32);
+        contractDummyPadding = intToUintByte(
+          Math.round(gasFees / 10000),
+          16 * 4
+        ); //changing decimal to fit the size only until protobuff
+      }
       return (
         purposeIndex +
         coinIndex +
@@ -149,7 +176,7 @@ export default class NearWallet implements IWallet {
         outputString +
         intToUintByte(changeCount, 8) +
         changeString +
-        gas +
+        transactionFees +
         decimal +
         contractDummyPadding +
         (addAccount ? intToUintByte(1, 8) : intToUintByte(0, 8))

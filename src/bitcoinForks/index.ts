@@ -1,5 +1,9 @@
 import { AxiosResponse } from 'axios';
-import { BTCCOINS } from '@cypherock/communication';
+import {
+  BTCCOINS,
+  FeatureName,
+  isFeatureEnabled
+} from '@cypherock/communication';
 import {
   bitcoin as bitcoinServer,
   v2 as v2Server
@@ -243,7 +247,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     throw new Error('not a valid address');
   }
 
-  async getDerivationPath(address: string): Promise<any> {
+  async getDerivationPath(sdkVersion: string, address: string): Promise<any> {
     const coinIndex = BTCCOINS[this.coinType].coinIndex;
     const accountIndex = '80000000';
 
@@ -252,7 +256,10 @@ export default class BitcoinWallet implements Partial<IWallet> {
     const purposeIndex = addressInfo.isSegwit ? '80000054' : '8000002c';
     const chainIndex = intToUintByte(addressInfo.chainIndex, 32);
     const addressIndex = intToUintByte(addressInfo.addressIndex, 32);
-    const contractDummyPadding = '0000000000000000';
+    let contractDummyPadding;
+    if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion))
+      contractDummyPadding = '00';
+    else contractDummyPadding = '0000000000000000';
 
     return (
       purposeIndex +
@@ -403,6 +410,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
   public async generateMetaData(
     outputList: Output[],
     feeRate: number,
+    sdkVersion: string,
     isSendAll?: boolean
   ): Promise<{ metaData: string; fees: number; inputs: any; outputs: any }> {
     try {
@@ -452,7 +460,15 @@ export default class BitcoinWallet implements Partial<IWallet> {
       }
 
       const decimalDummyPadding = intToUintByte(0, 8);
-      const contractDummyPadding = '0000000000000000';
+      let transactionFeesDummyPadding;
+      let contractDummyPadding;
+      if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion)) {
+        transactionFeesDummyPadding = intToUintByte(feeRate, 64);
+        contractDummyPadding = '00';
+      } else {
+        transactionFeesDummyPadding = intToUintByte(feeRate, 32);
+        contractDummyPadding = '0000000000000000';
+      }
 
       return {
         metaData:
@@ -465,7 +481,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
           outputString +
           intToUintByte(changeCount, 8) +
           changeString +
-          intToUintByte(feeRate, 32) +
+          transactionFeesDummyPadding +
           decimalDummyPadding +
           contractDummyPadding +
           '00', // Dummy chain Index

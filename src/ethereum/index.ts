@@ -1,6 +1,10 @@
 import Common, { Chain } from '@ethereumjs/common';
 import { Transaction, TxData } from '@ethereumjs/tx';
-import { EthCoinData } from '@cypherock/communication';
+import {
+  EthCoinData,
+  FeatureName,
+  isFeatureEnabled
+} from '@cypherock/communication';
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
 import * as RLP from 'rlp';
@@ -165,6 +169,7 @@ export default class EthereumWallet implements IWallet {
   }
 
   async generateMetaData(
+    sdkVersion: string,
     contractAddress?: string,
     contractAbbr?: string
   ): Promise<string> {
@@ -190,8 +195,7 @@ export default class EthereumWallet implements IWallet {
     const changeString = '0000000000000000';
 
     // this field is not used on the device, the transaction fees is calculated from the unsigned txn
-    const gas = intToUintByte(0, 32);
-
+    let gas;
     let decimal = intToUintByte(18, 8);
     if (contractAddress)
       decimal = intToUintByte(
@@ -199,9 +203,21 @@ export default class EthereumWallet implements IWallet {
         8
       );
 
-    let contract = createContractHex('ETH');
-    if (contractAbbr) {
-      contract = createContractHex(contractAbbr);
+    let contract;
+
+    if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion)) {
+      gas = intToUintByte(0, 64);
+      contract = Buffer.from('ETH', 'utf-8').toString('hex') + '00';
+      if (contractAbbr)
+        contract =
+          Buffer.from(contractAbbr.toUpperCase(), 'utf-8').toString('hex') +
+          '00';
+    } else {
+      gas = intToUintByte(0, 32);
+      contract = createContractHex('ETH');
+      if (contractAbbr) {
+        contract = createContractHex(contractAbbr);
+      }
     }
     // 8 byte name
     // contract = contract + '0'.repeat(16 - contract.length);
@@ -404,18 +420,24 @@ export default class EthereumWallet implements IWallet {
     return verifyTxn(signedTxn, this.address);
   }
 
-  public getDerivationPath(contractAbbr = 'ETH'): string {
+  public getDerivationPath(sdkVersion: string, contractAbbr = 'ETH'): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
     const accountIndex = '80000000';
     const chainIndex = '00000000';
     //Will only work till the node is < 10
     const addressIndex = '0000000' + this.node;
-    const contract = Buffer.from(contractAbbr.toUpperCase(), 'utf-8')
-      .toString('hex')
-      .padEnd(16, '0');
-    // 8 byte name
-    // contract = contract + '0'.repeat(16 - contract.length);
+    let contract;
+    if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion))
+      contract =
+        Buffer.from(contractAbbr.toUpperCase(), 'utf-8').toString('hex') + '00';
+    else {
+      contract = Buffer.from(contractAbbr.toUpperCase(), 'utf-8')
+        .toString('hex')
+        .padEnd(16, '0');
+      // 8 byte name
+      // contract = contract + '0'.repeat(16 - contract.length);
+    }
 
     return (
       purposeIndex +

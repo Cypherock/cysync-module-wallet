@@ -127,9 +127,9 @@ export default class EthereumWallet implements IWallet {
     logger.info('Eth balance', { ethBalance });
 
     // From Gwei to wei
-    const totalFee = new BigNumber(gasPrice * gasLimit).multipliedBy(
-      new BigNumber(Math.pow(10, 9))
-    );
+    const totalFee = new BigNumber(gasPrice * gasLimit)
+      .multipliedBy(new BigNumber(Math.pow(10, 9)))
+      .decimalPlaces(0);
     logger.info('Total fee', { totalFee });
 
     if (contractAddress) {
@@ -288,9 +288,9 @@ export default class EthereumWallet implements IWallet {
     });
 
     // From Gwei to wei
-    const totalFee = new BigNumber(gasPrice * gasLimit).multipliedBy(
-      new BigNumber(Math.pow(10, 9))
-    );
+    const totalFee = new BigNumber(gasPrice * gasLimit)
+      .multipliedBy(new BigNumber(Math.pow(10, 9)))
+      .decimalPlaces(0);
     logger.info('Total fee', { totalFee, address: this.address });
 
     if (contractAddress) {

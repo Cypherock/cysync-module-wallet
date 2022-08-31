@@ -1,6 +1,6 @@
 {
   "name": "@cypherock/wallet",
-  "version": "3.0.1-beta.50",
+  "version": "3.0.1-beta.51",
   "description": "All coin related operations",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

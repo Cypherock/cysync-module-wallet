@@ -158,7 +158,7 @@ export default class NearWallet implements IWallet {
       let contractDummyPadding;
       if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion)) {
         contractDummyPadding = '00';
-        transactionFees = intToUintByte(Math.round(gasFees / 10000), 16 * 8);
+        transactionFees = intToUintByte(Math.round(gasFees / 10000), 16 * 4);
       } else {
         transactionFees = intToUintByte(0, 32);
         contractDummyPadding = intToUintByte(

@@ -26,15 +26,6 @@ const intToUintByte = (ele: any, radix: number) => {
   return res + val;
 };
 
-const createContractHex = (abbr: string) => {
-  const hex = Buffer.from(abbr, 'utf-8').toString('hex');
-  let appendStr = '';
-  for (let i = 0; i < 8 - abbr.length; i += 1) {
-    appendStr += '00';
-  }
-  return hex + appendStr;
-};
-
 export default class EthereumWallet implements IWallet {
   xpub: string;
   web3: Web3;
@@ -171,7 +162,7 @@ export default class EthereumWallet implements IWallet {
   async generateMetaData(
     sdkVersion: string,
     contractAddress?: string,
-    contractAbbr?: string
+    contractAbbr: string = 'ETH'
   ): Promise<string> {
     logger.info('Generating metadata for', {
       address: this.address,
@@ -207,17 +198,13 @@ export default class EthereumWallet implements IWallet {
 
     if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion)) {
       gas = intToUintByte(0, 64);
-      contract = Buffer.from('ETH', 'utf-8').toString('hex') + '00';
-      if (contractAbbr)
-        contract =
-          Buffer.from(contractAbbr.toUpperCase(), 'utf-8').toString('hex') +
-          '00';
+      contract = Buffer.from(contractAbbr, 'utf-8').toString('hex') + '00';
     } else {
       gas = intToUintByte(0, 32);
-      contract = createContractHex('ETH');
-      if (contractAbbr) {
-        contract = createContractHex(contractAbbr);
-      }
+      contract = Buffer.from(contractAbbr.toUpperCase(), 'utf-8')
+        .toString('hex')
+        .slice(0, 14)
+        .padEnd(16, '0');
     }
     // 8 byte name
     // contract = contract + '0'.repeat(16 - contract.length);
@@ -434,6 +421,7 @@ export default class EthereumWallet implements IWallet {
     else {
       contract = Buffer.from(contractAbbr.toUpperCase(), 'utf-8')
         .toString('hex')
+        .slice(0, 14)
         .padEnd(16, '0');
       // 8 byte name
       // contract = contract + '0'.repeat(16 - contract.length);

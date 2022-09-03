@@ -5,10 +5,11 @@ export const getBalance = async (address: string, network = 'testnet') => {
   return near.wallet
     .getBalance({
       address,
-      network
+      network,
+      responseType: 'v2'
     })
     .request()
-    .then((res: AxiosResponse) => res.data);
+    .then((res: AxiosResponse) => res.data.balance);
 };
 
 export const getKeys = async (address: string, network = 'testnet') => {
@@ -33,7 +34,10 @@ export const getAccounts = async (address: string, network = 'testnet') => {
 
 export const getBlockHash = async (network = 'testnet') => {
   return near.transaction
-    .getBlockHash({ network })
+    .getBlockHash({
+      network,
+      responseType: 'v2'
+    })
     .request()
-    .then((res: AxiosResponse) => res.data);
+    .then((res: AxiosResponse) => res.data.hash);
 };

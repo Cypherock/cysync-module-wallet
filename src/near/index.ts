@@ -255,7 +255,7 @@ export default class NearWallet implements IWallet {
     const senderAddress = senderAddressArg || this.address;
     const action = new nearAPI.transactions.Action({
       deleteAccount: new nearAPI.transactions.DeleteAccount({
-        beneficiaryAddress: beneficiaryAddress
+        beneficiaryAddress
       })
     });
     const transaction = await this.generateTransactionAsHex(

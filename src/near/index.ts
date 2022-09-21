@@ -188,7 +188,7 @@ export default class NearWallet implements IWallet {
   }
 
   async generateUnsignedTransaction(
-    recieverAddress: string,
+    receiverAddress: string,
     amount: BigNumber,
     isSendAll: boolean,
     transactionFee: BigNumber,
@@ -218,7 +218,7 @@ export default class NearWallet implements IWallet {
       const bnAmount = Web3.utils.toBN(totalAmount);
       const action = nearAPI.transactions.transfer(bnAmount);
       const transaction = await this.generateTransactionAsHex(
-        recieverAddress,
+        receiverAddress,
         [action],
         senderAddress
       );
@@ -233,9 +233,9 @@ export default class NearWallet implements IWallet {
         ],
         outputs: [
           {
-            address: recieverAddress,
+            address: receiverAddress,
             value: totalAmount.toString(),
-            isMine: false
+            isMine: senderAddress === receiverAddress
           }
         ]
       };
@@ -246,16 +246,16 @@ export default class NearWallet implements IWallet {
   }
 
   public async generateDeleteAccountTransaction(
-    benificiaryAddress: string,
+    beneficiaryAddress: string,
     senderAddressArg?: string
   ): Promise<{
     txn: string;
-    benificiary: string;
+    beneficiary: string;
   }> {
     const senderAddress = senderAddressArg || this.address;
     const action = new nearAPI.transactions.Action({
       deleteAccount: new nearAPI.transactions.DeleteAccount({
-        benificiaryAddress
+        beneficiaryAddress
       })
     });
     const transaction = await this.generateTransactionAsHex(
@@ -265,7 +265,7 @@ export default class NearWallet implements IWallet {
     );
     return {
       txn: transaction,
-      benificiary: benificiaryAddress
+      beneficiary: beneficiaryAddress
     };
   }
 

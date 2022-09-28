@@ -1,5 +1,6 @@
-import Common, { Chain } from '@ethereumjs/common';
-import { Transaction, TxData } from '@ethereumjs/tx';
+import Common, { Chain, CustomChain } from '@ethereumjs/common';
+import { TxData, TransactionFactory, Transaction } from '@ethereumjs/tx';
+import { bufArrToArr } from '@ethereumjs/util';
 import {
   EthCoinData,
   FeatureName,
@@ -161,8 +162,8 @@ export default class EthereumWallet implements IWallet {
 
   async generateMetaData(
     sdkVersion: string,
-    contractAddress?: string,
-    contractAbbr: string = 'ETH'
+    contractAbbr: string,
+    contractAddress?: string
   ): Promise<string> {
     logger.info('Generating metadata for', {
       address: this.address,
@@ -198,7 +199,7 @@ export default class EthereumWallet implements IWallet {
 
     if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion)) {
       gas = intToUintByte(0, 64);
-      contract = Buffer.from(contractAbbr, 'utf-8').toString('hex') + '00';
+      contract = Buffer.from(contractAbbr.toUpperCase(), 'utf-8').toString('hex') + '00';
     } else {
       gas = intToUintByte(0, 32);
       contract = Buffer.from(contractAbbr.toUpperCase(), 'utf-8')
@@ -342,18 +343,22 @@ export default class EthereumWallet implements IWallet {
         value: this.web3.utils.toHex(totalAmount.toString(10))
       };
     }
-    const transaction = new Transaction(rawTx, {
-      common: new Common({ chain: chain === 1 ? Chain.Mainnet : Chain.Ropsten })
+    if (chain === 137)
+      var common = Common.custom(CustomChain.PolygonMainnet);
+    else if (chain === 3)
+      var common = new Common({ chain: Chain.Ropsten });
+    else
+      var common = new Common({ chain: Chain.Mainnet });
+
+    const transaction = TransactionFactory.fromTxData(rawTx, {
+      common: common
     });
-    const txHex = transaction.serialize().toString('hex');
-    const decoded: any = RLP.decode(Buffer.from(txHex, 'hex'));
-    const v = chain;
-    // added zero because Buffer.from('1', 'hex') returns an empty buffer
-    decoded[6] = Buffer.from('0' + v.toString(16), 'hex');
+    // Ref: https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/tx#signing-with-a-hardware-or-external-wallet
+    const txHex = Buffer.from(RLP.encode(bufArrToArr(transaction.getMessageToSign(false)))).toString('hex');
     logger.info('Calculated amount', { totalAmount });
 
     return {
-      txn: RLP.encode(decoded).toString('hex'),
+      txn: txHex,
       fee: totalFee,
       amount: totalAmount,
       inputs: [
@@ -392,18 +397,20 @@ export default class EthereumWallet implements IWallet {
     let s = rawValues.slice(64, 128);
     while (r.slice(0, 2) === '00') r = r.slice(2);
     while (s.slice(0, 2) === '00') s = s.slice(2);
-    const vParity = rawValues.slice(128) === '00' ? 0 : 1;
-    const txn: any = RLP.decode(Buffer.from(unsignedTxn, 'hex'));
-
-    // Typescript giving error here without using :any, due to issue in the rlp library. The output is an array of buffers, but the types are defined wrong in the file.
-    txn[7] = Buffer.from(r, 'hex');
-    txn[8] = Buffer.from(s, 'hex');
-
-    // tslint:disable-next-line: no-bitwise
-    const v = 2 * chainId + 35 + vParity;
-    txn[6] = Buffer.from(v.toString(16), 'hex');
-
-    return RLP.encode(txn).toString('hex');
+    const v = (2 * chainId + 35 + (rawValues.slice(128) === '00' ? 0 : 1)).toString(16);
+    let transaction = Transaction.fromSerializedTx(Buffer.from(unsignedTxn, 'hex'));
+    const rawTxn = {
+        nonce: transaction.nonce,
+        gasPrice: transaction.gasPrice,
+        gasLimit: transaction.gasLimit,
+        to: transaction.to,
+        value: transaction.value,
+        data: transaction.data,
+        v: `0x${v}`,
+        r: `0x${r}`,
+        s: `0x${s}`
+    }
+    return TransactionFactory.fromTxData(rawTxn).serialize().toString('hex');
   }
 
   public async verifySignedTxn(signedTxn: string) {

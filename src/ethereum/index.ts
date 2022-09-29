@@ -279,6 +279,9 @@ export default class EthereumWallet implements IWallet {
       .multipliedBy(new BigNumber(Math.pow(10, 9)))
       .decimalPlaces(0);
     logger.info('Total fee', { totalFee, address: this.address });
+    const convertedGasPrice = new BigNumber(gasPrice)
+      .multipliedBy(1000000000)
+      .decimalPlaces(0);
 
     if (contractAddress) {
       const contractBalance = new BigNumber(
@@ -310,7 +313,7 @@ export default class EthereumWallet implements IWallet {
       rawTx = {
         // call from server.
         nonce: await getTransactionCount(this.address, this.network),
-        gasPrice: this.web3.utils.toHex(gasPrice * 1000000000),
+        gasPrice: this.web3.utils.toHex(convertedGasPrice.toString()),
         gasLimit: this.web3.utils.toHex(gasLimit),
         to: contractAddress,
         value: '0x0',
@@ -333,7 +336,7 @@ export default class EthereumWallet implements IWallet {
       rawTx = {
         // call from server
         nonce: await getTransactionCount(this.address, this.network),
-        gasPrice: this.web3.utils.toHex(gasPrice * 1000000000),
+        gasPrice: this.web3.utils.toHex(convertedGasPrice.toString()),
         gasLimit: this.web3.utils.toHex(gasLimit),
         to: mixedCaseOutputAddr,
         value: this.web3.utils.toHex(totalAmount.toString(10))

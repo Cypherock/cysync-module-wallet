@@ -343,16 +343,15 @@ export default class EthereumWallet implements IWallet {
         value: this.web3.utils.toHex(totalAmount.toString(10))
       };
     }
+    let common;
     if (chain === 137)
-      var common = Common.custom(CustomChain.PolygonMainnet);
+      common = Common.custom(CustomChain.PolygonMainnet);
     else if (chain === 3)
-      var common = new Common({ chain: Chain.Ropsten });
+      common = new Common({ chain: Chain.Ropsten });
     else
-      var common = new Common({ chain: Chain.Mainnet });
+      common = new Common({ chain: Chain.Mainnet });
 
-    const transaction = TransactionFactory.fromTxData(rawTx, {
-      common: common
-    });
+    const transaction = TransactionFactory.fromTxData(rawTx, { common });
     // Ref: https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/tx#signing-with-a-hardware-or-external-wallet
     const txHex = Buffer.from(RLP.encode(bufArrToArr(transaction.getMessageToSign(false)))).toString('hex');
     logger.info('Calculated amount', { totalAmount });
@@ -398,7 +397,7 @@ export default class EthereumWallet implements IWallet {
     while (r.slice(0, 2) === '00') r = r.slice(2);
     while (s.slice(0, 2) === '00') s = s.slice(2);
     const v = (2 * chainId + 35 + (rawValues.slice(128) === '00' ? 0 : 1)).toString(16);
-    let transaction = Transaction.fromSerializedTx(Buffer.from(unsignedTxn, 'hex'));
+    const transaction = Transaction.fromSerializedTx(Buffer.from(unsignedTxn, 'hex'));
     const rawTxn = {
         nonce: transaction.nonce,
         gasPrice: transaction.gasPrice,

@@ -199,7 +199,8 @@ export default class EthereumWallet implements IWallet {
 
     if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion)) {
       gas = intToUintByte(0, 64);
-      contract = Buffer.from(contractAbbr.toUpperCase(), 'utf-8').toString('hex') + '00';
+      contract =
+        Buffer.from(contractAbbr.toUpperCase(), 'utf-8').toString('hex') + '00';
     } else {
       gas = intToUintByte(0, 32);
       contract = Buffer.from(contractAbbr.toUpperCase(), 'utf-8')
@@ -344,18 +345,17 @@ export default class EthereumWallet implements IWallet {
       };
     }
     let common;
-    if (chain === 137)
-      common = Common.custom(CustomChain.PolygonMainnet);
-    else if (chain === 3)
-      common = new Common({ chain: Chain.Ropsten });
-    else
-      common = new Common({ chain: Chain.Mainnet });
+    if (chain === 137) common = Common.custom(CustomChain.PolygonMainnet);
+    else if (chain === 3) common = new Common({ chain: Chain.Ropsten });
+    else common = new Common({ chain: Chain.Mainnet });
 
-    const transaction = TransactionFactory.fromTxData(rawTx, { 
+    const transaction = TransactionFactory.fromTxData(rawTx, {
       common
     });
     // Ref: https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/tx#signing-with-a-hardware-or-external-wallet
-    const txHex = Buffer.from(RLP.encode(bufArrToArr(transaction.getMessageToSign(false)))).toString('hex');
+    const txHex = Buffer.from(
+      RLP.encode(bufArrToArr(transaction.getMessageToSign(false)))
+    ).toString('hex');
     logger.info('Calculated amount', { totalAmount });
 
     return {
@@ -398,19 +398,25 @@ export default class EthereumWallet implements IWallet {
     let s = rawValues.slice(64, 128);
     while (r.slice(0, 2) === '00') r = r.slice(2);
     while (s.slice(0, 2) === '00') s = s.slice(2);
-    const v = (2 * chainId + 35 + (rawValues.slice(128) === '00' ? 0 : 1)).toString(16);
-    const transaction = Transaction.fromSerializedTx(Buffer.from(unsignedTxn, 'hex'));
+    const v = (
+      2 * chainId +
+      35 +
+      (rawValues.slice(128) === '00' ? 0 : 1)
+    ).toString(16);
+    const transaction = Transaction.fromSerializedTx(
+      Buffer.from(unsignedTxn, 'hex')
+    );
     const rawTxn = {
-        nonce: transaction.nonce,
-        gasPrice: transaction.gasPrice,
-        gasLimit: transaction.gasLimit,
-        to: transaction.to,
-        value: transaction.value,
-        data: transaction.data,
-        v: `0x${v}`,
-        r: `0x${r}`,
-        s: `0x${s}`
-    }
+      nonce: transaction.nonce,
+      gasPrice: transaction.gasPrice,
+      gasLimit: transaction.gasLimit,
+      to: transaction.to,
+      value: transaction.value,
+      data: transaction.data,
+      v: `0x${v}`,
+      r: `0x${r}`,
+      s: `0x${s}`
+    };
     return TransactionFactory.fromTxData(rawTxn).serialize().toString('hex');
   }
 

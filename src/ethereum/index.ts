@@ -351,7 +351,9 @@ export default class EthereumWallet implements IWallet {
     else
       common = new Common({ chain: Chain.Mainnet });
 
-    const transaction = TransactionFactory.fromTxData(rawTx, { common });
+    const transaction = TransactionFactory.fromTxData(rawTx, { 
+      common
+    });
     // Ref: https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/tx#signing-with-a-hardware-or-external-wallet
     const txHex = Buffer.from(RLP.encode(bufArrToArr(transaction.getMessageToSign(false)))).toString('hex');
     logger.info('Calculated amount', { totalAmount });

@@ -5,7 +5,6 @@ import { logger } from '../utils';
 import { intToUintByte } from '../bitcoinForks/segwitHelper';
 import { WalletError, WalletErrorType } from '../errors';
 import BigNumber from 'bignumber.js';
-import verifyTxn from './txVerifier';
 import generateSolanaAddress from '../utils/generateSolanaAddress';
 import { base_decode, base_encode } from 'near-api-js/lib/utils/serialize';
 import {
@@ -179,7 +178,8 @@ export default class SolanaWallet implements IWallet {
   }
 
   public async verifySignedTxn(signedTxn: string): Promise<boolean> {
-    return verifyTxn(signedTxn);
+    const signedTransaction = Transaction.from(base_decode(signedTxn));
+    return signedTransaction.verifySignatures();
   }
 
   public getSignedTransaction(

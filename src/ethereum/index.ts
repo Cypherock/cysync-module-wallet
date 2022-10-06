@@ -1,5 +1,5 @@
-import Common, { Chain, CustomChain } from '@ethereumjs/common';
-import { TxData, TransactionFactory, Transaction } from '@ethereumjs/tx';
+import Common from '@ethereumjs/common';
+import { TxData, TransactionFactory } from '@ethereumjs/tx';
 import { bufArrToArr } from '@ethereumjs/util';
 import {
   EthCoinData,
@@ -162,8 +162,8 @@ export default class EthereumWallet implements IWallet {
 
   async generateMetaData(
     sdkVersion: string,
-    contractAbbr: string,
-    contractAddress?: string
+    contractAddress?: string,
+    contractAbbr: string = 'ETH'
   ): Promise<string> {
     logger.info('Generating metadata for', {
       address: this.address,
@@ -344,11 +344,7 @@ export default class EthereumWallet implements IWallet {
         value: this.web3.utils.toHex(totalAmount.toString(10))
       };
     }
-    let common;
-    if (chain === 137) common = Common.custom(CustomChain.PolygonMainnet);
-    else if (chain === 3) common = new Common({ chain: Chain.Ropsten });
-    else common = new Common({ chain: Chain.Mainnet });
-
+    const common = Common.custom({ chainId: chain });
     const transaction = TransactionFactory.fromTxData(rawTx, {
       common
     });
@@ -394,6 +390,7 @@ export default class EthereumWallet implements IWallet {
     chainId = 1
   ): string {
     logger.verbose('Generating signed txn', { address: this.address });
+    const common = Common.custom({ chainId });
     let r = rawValues.slice(0, 64);
     let s = rawValues.slice(64, 128);
     while (r.slice(0, 2) === '00') r = r.slice(2);
@@ -403,21 +400,24 @@ export default class EthereumWallet implements IWallet {
       35 +
       (rawValues.slice(128) === '00' ? 0 : 1)
     ).toString(16);
-    const transaction = Transaction.fromSerializedTx(
+    const [nonce, gasPrice, gasLimit, to, value, data] = RLP.decode(
       Buffer.from(unsignedTxn, 'hex')
     );
+    const toStr = (to as any).toString('hex');
     const rawTxn = {
-      nonce: transaction.nonce,
-      gasPrice: transaction.gasPrice,
-      gasLimit: transaction.gasLimit,
-      to: transaction.to,
-      value: transaction.value,
-      data: transaction.data,
+      nonce,
+      gasPrice,
+      gasLimit,
+      to: `0x${toStr}`,
+      value,
+      data,
       v: `0x${v}`,
       r: `0x${r}`,
       s: `0x${s}`
     };
-    return TransactionFactory.fromTxData(rawTxn).serialize().toString('hex');
+    return TransactionFactory.fromTxData(rawTxn, { common })
+      .serialize()
+      .toString('hex');
   }
 
   public async verifySignedTxn(signedTxn: string) {

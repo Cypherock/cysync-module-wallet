@@ -21,6 +21,7 @@
     "@cypherock/server-wrapper": "1.0.1-beta.22",
     "@ethereumjs/common": "^2.6.2",
     "@ethereumjs/tx": "^3.5.0",
+    "@solana/web3.js": "^1.63.1",
     "@ethereumjs/util": "^8.0.0",
     "axios": "^0.25.0",
     "bech32": "^1.1.4",

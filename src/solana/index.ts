@@ -184,7 +184,8 @@ export default class SolanaWallet implements IWallet {
 
   public getSignedTransaction(
     unsignedTransaction: string,
-    inputSignature: string
+    inputSignature: string,
+    blockhash?: string
   ): string {
     const transaction = Transaction.populate(
       Message.from(Buffer.from(unsignedTransaction, 'hex'))
@@ -192,6 +193,8 @@ export default class SolanaWallet implements IWallet {
     const signerPublicKey = PublicKey.decode(
       Buffer.from(base_decode(this.address).toString('hex'), 'hex').reverse()
     );
+    if (blockhash)
+      transaction.recentBlockhash = base_encode(Buffer.from(blockhash, 'hex'));
     transaction.addSignature(
       signerPublicKey,
       Buffer.from(inputSignature, 'hex')
@@ -239,5 +242,9 @@ export default class SolanaWallet implements IWallet {
       amount: totalAmount
     });
     return { fees: totalFee, amount: totalAmount };
+  }
+
+  public async getLatestBlockhashAsHex() {
+    return base_decode(await getBlockHash(this.coin.network)).toString('hex');
   }
 }

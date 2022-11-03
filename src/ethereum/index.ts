@@ -1,6 +1,5 @@
 import Common from '@ethereumjs/common';
 import { TxData, TransactionFactory } from '@ethereumjs/tx';
-import { bufArrToArr } from '@ethereumjs/util';
 import {
   EthCoinData,
   FeatureName,
@@ -15,6 +14,7 @@ import verifyTxn from './txVerifier';
 import { logger } from '../utils';
 import { getBalance, getDecimal, getTransactionCount } from './client';
 import { WalletError, WalletErrorType } from '../errors';
+import { bufArrToArr } from '@ethereumjs/util/dist/bytes';
 
 // In 2 places, put them in one place
 const intToUintByte = (ele: any, radix: number) => {

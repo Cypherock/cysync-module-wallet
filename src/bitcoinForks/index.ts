@@ -268,7 +268,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      '00'
+      intToUintByte(0, 64)
     );
   }
 
@@ -484,7 +484,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
           transactionFeesDummyPadding +
           decimalDummyPadding +
           contractDummyPadding +
-          '00', // Dummy chain Index
+          intToUintByte(0, 64), // Dummy chain Index
         fees: fee,
         inputs,
         outputs

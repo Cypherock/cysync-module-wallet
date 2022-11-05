@@ -63,7 +63,7 @@ export default class NearWallet implements IWallet {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      '00'
+      intToUintByte(0, 64)
     );
   }
 
@@ -90,7 +90,7 @@ export default class NearWallet implements IWallet {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      '01' +
+      intToUintByte(0, 64) +
       acc.padEnd(66, '0')
     );
   }
@@ -179,7 +179,7 @@ export default class NearWallet implements IWallet {
         transactionFees +
         decimal +
         contractDummyPadding +
-        (addAccount ? intToUintByte(1, 8) : intToUintByte(0, 8))
+        (addAccount ? intToUintByte(1, 64) : intToUintByte(0, 64))
       );
     } catch (e) {
       logger.error('Error generating metadata', e);

@@ -224,7 +224,7 @@ export default class EthereumWallet implements IWallet {
       gas +
       decimal +
       contract +
-      intToUintByte(this.coin.chain, 8)
+      intToUintByte(this.coin.chain, 64)
     );
   }
 
@@ -451,7 +451,7 @@ export default class EthereumWallet implements IWallet {
       chainIndex +
       addressIndex +
       contract +
-      intToUintByte(this.coin.chain, 8)
+      intToUintByte(this.coin.chain, 64)
     );
   }
 }

@@ -49,7 +49,7 @@ export default class SolanaWallet implements IWallet {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      '00'
+      intToUintByte(0, 64)
     );
   }
 
@@ -98,7 +98,7 @@ export default class SolanaWallet implements IWallet {
         transactionFees +
         decimal +
         contractDummyPadding +
-        intToUintByte(0, 8)
+        intToUintByte(0, 64)
       );
     } catch (e) {
       logger.error('Error generating metadata', e);

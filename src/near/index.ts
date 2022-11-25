@@ -56,6 +56,11 @@ export default class NearWallet implements IWallet {
       contractDummyPadding = '00';
     else contractDummyPadding = '0000000000000000';
 
+    const longChainId = isFeatureEnabled(
+      FeatureName.EvmLongChainId,
+      sdkVersion
+    );
+
     return (
       purposeIndex +
       coinIndex +
@@ -63,7 +68,7 @@ export default class NearWallet implements IWallet {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      intToUintByte(0, 64)
+      intToUintByte(0, longChainId ? 64 : 8)
     );
   }
 
@@ -83,6 +88,10 @@ export default class NearWallet implements IWallet {
     else contractDummyPadding = '0000000000000000';
 
     const acc = Buffer.from(customAccount).toString('hex');
+    const longChainId = isFeatureEnabled(
+      FeatureName.EvmLongChainId,
+      sdkVersion
+    );
     return (
       purposeIndex +
       coinIndex +
@@ -90,7 +99,7 @@ export default class NearWallet implements IWallet {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      intToUintByte(0, 64) +
+      intToUintByte(0, longChainId ? 64 : 8) +
       acc.padEnd(66, '0')
     );
   }
@@ -166,6 +175,10 @@ export default class NearWallet implements IWallet {
           16 * 4
         ); //changing decimal to fit the size only until protobuff
       }
+      const longChainId = isFeatureEnabled(
+        FeatureName.EvmLongChainId,
+        sdkVersion
+      );
       return (
         purposeIndex +
         coinIndex +
@@ -179,7 +192,9 @@ export default class NearWallet implements IWallet {
         transactionFees +
         decimal +
         contractDummyPadding +
-        (addAccount ? intToUintByte(1, 64) : intToUintByte(0, 64))
+        (addAccount
+          ? intToUintByte(1, 64)
+          : intToUintByte(0, longChainId ? 64 : 8))
       );
     } catch (e) {
       logger.error('Error generating metadata', e);

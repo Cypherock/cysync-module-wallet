@@ -260,6 +260,10 @@ export default class BitcoinWallet implements Partial<IWallet> {
     if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion))
       contractDummyPadding = '00';
     else contractDummyPadding = '0000000000000000';
+    const longChainId = isFeatureEnabled(
+      FeatureName.EvmLongChainId,
+      sdkVersion
+    );
 
     return (
       purposeIndex +
@@ -268,7 +272,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      intToUintByte(0, 64)
+      intToUintByte(0, longChainId ? 64 : 8)
     );
   }
 
@@ -469,6 +473,10 @@ export default class BitcoinWallet implements Partial<IWallet> {
         transactionFeesDummyPadding = intToUintByte(feeRate, 32);
         contractDummyPadding = '0000000000000000';
       }
+      const longChainId = isFeatureEnabled(
+        FeatureName.EvmLongChainId,
+        sdkVersion
+      );
 
       return {
         metaData:
@@ -484,7 +492,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
           transactionFeesDummyPadding +
           decimalDummyPadding +
           contractDummyPadding +
-          intToUintByte(0, 64), // Dummy chain Index
+          intToUintByte(0, longChainId ? 64 : 8), // Dummy chain Index
         fees: fee,
         inputs,
         outputs

@@ -1,4 +1,8 @@
-import { SolanaCoinData } from '@cypherock/communication';
+import {
+  FeatureName,
+  isFeatureEnabled,
+  SolanaCoinData
+} from '@cypherock/communication';
 import IWallet from '../interface/wallet';
 import { getBalance, getBlockHash } from './client';
 import { logger } from '../utils';
@@ -33,7 +37,7 @@ export default class SolanaWallet implements IWallet {
     return this.address;
   }
 
-  public getDerivationPath(): string {
+  public getDerivationPath(sdkVersion: string): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
     const accountIndex = '80000000';
@@ -41,6 +45,10 @@ export default class SolanaWallet implements IWallet {
     const addressIndex = '80000001';
 
     const contractDummyPadding = '00';
+    const longChainId = isFeatureEnabled(
+      FeatureName.EvmLongChainId,
+      sdkVersion
+    );
 
     return (
       purposeIndex +
@@ -49,7 +57,7 @@ export default class SolanaWallet implements IWallet {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      intToUintByte(0, 64)
+      intToUintByte(0, longChainId ? 64 : 8)
     );
   }
 
@@ -62,7 +70,7 @@ export default class SolanaWallet implements IWallet {
     // do nothing
   }
 
-  async generateMetaData(gasFees: number) {
+  async generateMetaData(sdkVersion: string, gasFees: number) {
     try {
       logger.info('Generating metadata for solana', {
         address: this.address
@@ -85,6 +93,10 @@ export default class SolanaWallet implements IWallet {
 
       const contractDummyPadding = '00';
       const transactionFees = intToUintByte(Math.round(gasFees), 16 * 4);
+      const longChainId = isFeatureEnabled(
+        FeatureName.EvmLongChainId,
+        sdkVersion
+      );
       return (
         purposeIndex +
         coinIndex +
@@ -98,7 +110,7 @@ export default class SolanaWallet implements IWallet {
         transactionFees +
         decimal +
         contractDummyPadding +
-        intToUintByte(0, 64)
+        intToUintByte(0, longChainId ? 64 : 8)
       );
     } catch (e) {
       logger.error('Error generating metadata', e);

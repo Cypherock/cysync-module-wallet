@@ -193,7 +193,7 @@ export default class NearWallet implements IWallet {
         decimal +
         contractDummyPadding +
         (addAccount
-          ? intToUintByte(1, 64)
+          ? intToUintByte(1, longChainId ? 64 : 8)
           : intToUintByte(0, longChainId ? 64 : 8))
       );
     } catch (e) {

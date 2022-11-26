@@ -371,6 +371,28 @@ export default class EthereumWallet implements IWallet {
     };
   }
 
+  async generateMessageHex(message: string): Promise<string> {
+    if (!message.startsWith('0x')) {
+      throw new Error('Message should be in hex');
+    }
+
+    logger.info('Generating message hex for', {
+      address: this.address,
+      message
+    });
+
+    const messageBuffer = Buffer.from(message.slice(2), 'hex');
+    const prefixBuffer = Buffer.from(
+      '\x19Ethereum Signed Message:\n' + messageBuffer.length
+    );
+    const dataBuffer = Buffer.concat([prefixBuffer, messageBuffer]);
+    const dataToSignHex = Buffer.from(dataBuffer).toString('hex');
+
+    logger.verbose('Generated message hex', { dataToSignHex });
+
+    return dataToSignHex;
+  }
+
   async getTotalBalance(contractAddress?: string) {
     // to keep in sync with bitcoin's balance structure in the db
     const bal = {

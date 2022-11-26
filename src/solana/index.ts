@@ -70,7 +70,7 @@ export default class SolanaWallet implements IWallet {
     // do nothing
   }
 
-  async generateMetaData(sdkVersion: string, gasFees: number) {
+  async generateMetaData(gasFees: number, sdkVersion: string) {
     try {
       logger.info('Generating metadata for solana', {
         address: this.address

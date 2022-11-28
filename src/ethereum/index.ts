@@ -229,15 +229,17 @@ export default class EthereumWallet implements IWallet {
   }
 
   // gas price in gwei
-  async generateUnsignedTransaction(
-    outputAddress: string,
-    amount: BigNumber,
-    gasPrice: number,
-    gasLimit: number,
-    chain = 1,
-    isSendAll: boolean,
-    contractAddress?: string
-  ): Promise<{
+  async generateUnsignedTransaction(params: {
+    outputAddress: string;
+    amount: BigNumber;
+    gasPrice: number;
+    gasLimit: number;
+    chain?: number;
+    isSendAll: boolean;
+    contractAddress?: string;
+    contractData?: string;
+    nonce?: string;
+  }): Promise<{
     txn: string;
     amount: BigNumber;
     fee: BigNumber;
@@ -248,6 +250,18 @@ export default class EthereumWallet implements IWallet {
     }>;
     outputs: Array<{ value: string; address: string; isMine: boolean }>;
   }> {
+    const {
+      outputAddress,
+      amount,
+      gasPrice,
+      gasLimit,
+      chain = 1,
+      isSendAll,
+      contractAddress,
+      contractData,
+      nonce
+    } = params;
+
     logger.info('Generating unsignedTxn for', {
       address: this.address,
       outputAddress,
@@ -255,7 +269,9 @@ export default class EthereumWallet implements IWallet {
       gasPrice,
       gasLimit,
       chain,
-      contractAddress
+      contractAddress,
+      contractData,
+      nonce
     });
 
     // Convert from lowercase address to mixed case for easier comparison
@@ -285,7 +301,17 @@ export default class EthereumWallet implements IWallet {
       .multipliedBy(1000000000)
       .decimalPlaces(0);
 
-    if (contractAddress) {
+    if (contractData) {
+      rawTx = {
+        // call from server.
+        nonce: nonce || (await getTransactionCount(this.address, this.network)),
+        gasPrice: this.web3.utils.toHex(convertedGasPrice.toString()),
+        gasLimit: this.web3.utils.toHex(gasLimit),
+        to: contractAddress || mixedCaseOutputAddr,
+        value: this.web3.utils.toHex(totalAmount.toString(10)),
+        data: contractData
+      };
+    } else if (contractAddress) {
       const contractBalance = new BigNumber(
         (await this.getTotalBalance(contractAddress)).balance
       );

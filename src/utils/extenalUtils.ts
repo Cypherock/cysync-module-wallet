@@ -5,3 +5,5 @@ export { default as generateSolanaAddressFromXpub } from './generateSolanaAddres
 export { default as getEthAmountFromInput } from './getEthAmountFromInput';
 export { default as formatEthAddress } from './formatEthAddress';
 export { default as uint8ArrayFromHexString } from './uint8ArrayFromHexString';
+export { formatHarmonyAddress } from './formatEthAddress';
+export { toHexString } from './uint8ArrayFromHexString';

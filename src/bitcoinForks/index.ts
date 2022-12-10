@@ -492,7 +492,8 @@ export default class BitcoinWallet implements Partial<IWallet> {
           transactionFeesDummyPadding +
           decimalDummyPadding +
           contractDummyPadding +
-          intToUintByte(0, longChainId ? 64 : 8), // Dummy chain Index
+          intToUintByte(0, longChainId ? 64 : 8) + // Dummy chain Index
+          (longChainId ? '00' : ''), // not a harmony address
         fees: fee,
         inputs,
         outputs

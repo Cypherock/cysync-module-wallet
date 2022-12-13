@@ -99,7 +99,7 @@ export default class NearWallet implements IWallet {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      intToUintByte(0, longChainId ? 64 : 8) +
+      intToUintByte(1, longChainId ? 64 : 8) +
       acc.padEnd(66, '0')
     );
   }

@@ -92,7 +92,7 @@ export default class EthereumWallet implements IWallet {
       }
     ];
     this.evmAddress = this.address;
-    if (this.coin.coinListId === 0x0e) {
+    if (this.coin.coinListId === ETHCOINS['one'].coinListId) {
       this.address = formatHarmonyAddress(this.evmAddress);
     }
   }

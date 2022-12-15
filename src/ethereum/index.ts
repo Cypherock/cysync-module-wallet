@@ -210,6 +210,10 @@ export default class EthereumWallet implements IWallet {
     }
     // 8 byte name
     // contract = contract + '0'.repeat(16 - contract.length);
+    const longChainId = isFeatureEnabled(
+      FeatureName.EvmLongChainId,
+      sdkVersion
+    );
 
     return (
       purposeIndex +
@@ -224,7 +228,7 @@ export default class EthereumWallet implements IWallet {
       gas +
       decimal +
       contract +
-      intToUintByte(this.coin.chain, 8)
+      intToUintByte(this.coin.chain, longChainId ? 64 : 8)
     );
   }
 
@@ -491,6 +495,10 @@ export default class EthereumWallet implements IWallet {
       // 8 byte name
       // contract = contract + '0'.repeat(16 - contract.length);
     }
+    const longChainId = isFeatureEnabled(
+      FeatureName.EvmLongChainId,
+      sdkVersion
+    );
 
     return (
       purposeIndex +
@@ -499,7 +507,7 @@ export default class EthereumWallet implements IWallet {
       chainIndex +
       addressIndex +
       contract +
-      intToUintByte(this.coin.chain, 8)
+      intToUintByte(this.coin.chain, longChainId ? 64 : 8)
     );
   }
 }

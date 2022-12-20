@@ -2,9 +2,11 @@ import Common from '@ethereumjs/common';
 import { TxData, TransactionFactory } from '@ethereumjs/tx';
 import {
   EthCoinData,
+  ETHCOINS,
   FeatureName,
   isFeatureEnabled
 } from '@cypherock/communication';
+import bech32 from 'bech32';
 import BigNumber from 'bignumber.js';
 import { utils } from 'ethers';
 import * as RLP from 'rlp';
@@ -15,6 +17,8 @@ import { logger } from '../utils';
 import { getBalance, getDecimal, getTransactionCount } from './client';
 import { WalletError, WalletErrorType } from '../errors';
 import { bufArrToArr } from '@ethereumjs/util/dist/bytes';
+import { formatHarmonyAddress } from '../utils/formatEthAddress';
+import { toHexString } from '../utils/uint8ArrayFromHexString';
 
 // In 2 places, put them in one place
 const intToUintByte = (ele: any, radix: number) => {
@@ -35,6 +39,7 @@ export default class EthereumWallet implements IWallet {
   node: number;
   network: string;
   coin: EthCoinData;
+  evmAddress: string;
 
   constructor(xpub: string, coin: EthCoinData, node = 0) {
     this.node = node;
@@ -86,6 +91,10 @@ export default class EthereumWallet implements IWallet {
         type: 'function'
       }
     ];
+    this.evmAddress = this.address;
+    if (this.coin.coinListId === ETHCOINS.one.coinListId) {
+      this.address = formatHarmonyAddress(this.evmAddress);
+    }
   }
 
   public async setupNewWallet() {
@@ -99,7 +108,10 @@ export default class EthereumWallet implements IWallet {
     isSendAll?: boolean,
     contractAddress?: string
   ): Promise<{ fees: BigNumber; amount: BigNumber }> {
-    logger.verbose('Approximating Txn Fee', { address: this.address });
+    logger.verbose('Approximating Txn Fee', {
+      address: this.address,
+      evmAddress: this.evmAddress
+    });
 
     logger.info('Approximating Txn Fee data', {
       amount,
@@ -163,7 +175,8 @@ export default class EthereumWallet implements IWallet {
   async generateMetaData(
     sdkVersion: string,
     contractAddress?: string,
-    contractAbbr: string = 'ETH'
+    contractAbbr: string = 'ETH',
+    isHarmonyAddress: boolean = false
   ): Promise<string> {
     logger.info('Generating metadata for', {
       address: this.address,
@@ -228,7 +241,8 @@ export default class EthereumWallet implements IWallet {
       gas +
       decimal +
       contract +
-      intToUintByte(this.coin.chain, longChainId ? 64 : 8)
+      intToUintByte(this.coin.chain, longChainId ? 64 : 8) +
+      (longChainId ? intToUintByte(isHarmonyAddress ? 1 : 0, 8) : '') // could be harmony address
     );
   }
 
@@ -278,8 +292,15 @@ export default class EthereumWallet implements IWallet {
       nonce
     });
 
+    let evmAddress = outputAddress;
+    if (chain === ETHCOINS.one?.chain && outputAddress.startsWith('one1')) {
+      // convert Harmony's bech32 addresses to hexstring address
+      // since the recipient is validated, no scope for errors
+      const { words } = bech32.decode(outputAddress);
+      evmAddress = toHexString(new Uint8Array(bech32.fromWords(words)));
+    }
     // Convert from lowercase address to mixed case for easier comparison
-    const mixedCaseOutputAddr = utils.getAddress(outputAddress);
+    const mixedCaseOutputAddr = utils.getAddress(evmAddress);
 
     let rawTx: TxData;
 
@@ -339,12 +360,12 @@ export default class EthereumWallet implements IWallet {
       const contract = new this.web3.eth.Contract(
         this.minABI,
         contractAddress,
-        { from: this.address }
+        { from: this.evmAddress }
       );
 
       rawTx = {
         // call from server.
-        nonce: await getTransactionCount(this.address, this.network),
+        nonce: await getTransactionCount(this.evmAddress, this.network),
         gasPrice: this.web3.utils.toHex(convertedGasPrice.toString()),
         gasLimit: this.web3.utils.toHex(gasLimit),
         to: contractAddress,
@@ -367,7 +388,7 @@ export default class EthereumWallet implements IWallet {
 
       rawTx = {
         // call from server
-        nonce: await getTransactionCount(this.address, this.network),
+        nonce: await getTransactionCount(this.evmAddress, this.network),
         gasPrice: this.web3.utils.toHex(convertedGasPrice.toString()),
         gasLimit: this.web3.utils.toHex(gasLimit),
         to: mixedCaseOutputAddr,
@@ -389,13 +410,17 @@ export default class EthereumWallet implements IWallet {
       fee: totalFee,
       amount: totalAmount,
       inputs: [
-        { address: this.address, value: totalAmount.toString(), isMine: true }
+        {
+          address: this.evmAddress,
+          value: totalAmount.toString(),
+          isMine: true
+        }
       ],
       outputs: [
         {
           address: mixedCaseOutputAddr,
           value: totalAmount.toString(),
-          isMine: this.address === mixedCaseOutputAddr
+          isMine: this.evmAddress === mixedCaseOutputAddr
         }
       ]
     };
@@ -426,7 +451,7 @@ export default class EthereumWallet implements IWallet {
   async getTotalBalance(contractAddress?: string) {
     // to keep in sync with bitcoin's balance structure in the db
     const bal = {
-      balance: await getBalance(this.address, this.network, contractAddress)
+      balance: await getBalance(this.evmAddress, this.network, contractAddress)
     };
 
     return bal;
@@ -473,7 +498,7 @@ export default class EthereumWallet implements IWallet {
   }
 
   public async verifySignedTxn(signedTxn: string) {
-    return verifyTxn(signedTxn, this.address);
+    return verifyTxn(signedTxn, this.evmAddress);
   }
 
   public getDerivationPath(sdkVersion: string, contractAbbr = 'ETH'): string {

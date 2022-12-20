@@ -110,7 +110,8 @@ export default class SolanaWallet implements IWallet {
         transactionFees +
         decimal +
         contractDummyPadding +
-        intToUintByte(0, longChainId ? 64 : 8)
+        intToUintByte(0, longChainId ? 64 : 8) +
+        (longChainId ? '00' : '')
       );
     } catch (e) {
       logger.error('Error generating metadata', e);

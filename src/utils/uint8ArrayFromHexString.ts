@@ -6,4 +6,12 @@ const uint8ArrayFromHexString = (hexString: string): Uint8Array => {
   );
 };
 
+export const toHexString = (byteArray: Uint8Array) => {
+  let s = '0x';
+  byteArray.forEach(byte => {
+    s += ('0' + byte.toString(16)).slice(-2);
+  });
+  return s;
+};
+
 export default uint8ArrayFromHexString;

@@ -1,8 +1,10 @@
 import { AxiosResponse } from 'axios';
 import {
   BTCCOINS,
+  BtcCoinMap,
   FeatureName,
-  isFeatureEnabled
+  isFeatureEnabled,
+  BitcoinAccountTypes
 } from '@cypherock/communication';
 import {
   bitcoin as bitcoinServer,
@@ -11,7 +13,6 @@ import {
 import * as bip32 from 'bip32';
 import * as bitcoin from 'bitcoinjs-lib';
 import { AddressDB, TransactionDB } from '@cypherock/database';
-import crypto from 'crypto';
 
 import IWallet from '../interface/wallet';
 import Output from '../interface/output';
@@ -46,78 +47,77 @@ export interface AddressDataList {
 export default class BitcoinWallet implements Partial<IWallet> {
   xpub: string;
   modifiedZpub?: string;
-  zpub?: string;
-  coinType: string;
-  external: string;
-  internal: string;
-  segwitExternal: string;
-  segwitInternal: string;
+  coinId: string;
   network: any;
   addressDB: AddressDB | undefined;
   transactionDB: TransactionDB | undefined;
   walletId: string;
+  accountType?: string;
+  accountIndex: number;
+  accountId: string;
 
   constructor(options: {
     xpub: string;
-    coinType: string;
+    coinId: string;
     walletId: string;
-    zpub?: string;
+    accountType?: string;
+    accountId: string;
+    accountIndex: number;
     addressDb?: AddressDB;
     transactionDb?: TransactionDB;
   }) {
-    const { xpub, walletId, coinType, zpub, addressDb, transactionDb } =
-      options;
+    const {
+      xpub,
+      walletId,
+      coinId: coinId,
+      accountType,
+      addressDb,
+      transactionDb,
+      accountIndex,
+      accountId
+    } = options;
     this.xpub = xpub;
     this.walletId = walletId;
-    this.segwitExternal = '';
-    this.segwitInternal = '';
-    if (zpub !== undefined && BTCCOINS[coinType].hasSegwit) {
-      this.modifiedZpub = convertZpub(zpub, coinType === BTCCOINS.btct.abbr);
-      this.zpub = zpub;
-      const segwitHash = crypto
-        .createHash('sha256')
-        .update(zpub)
-        .digest('hex')
-        .slice(0, 24); // We need to use first 32 characters, but blockcypher allows max of 25
-
-      this.segwitExternal = `r${segwitHash}`;
-      this.segwitInternal = `c${segwitHash}`;
+    this.accountIndex = accountIndex;
+    this.accountId = accountId;
+    if (
+      accountType === BitcoinAccountTypes.nativeSegwit &&
+      BTCCOINS[coinId].supportedAccountTypes.includes(
+        BitcoinAccountTypes.nativeSegwit
+      )
+    ) {
+      this.modifiedZpub = convertZpub(
+        xpub,
+        coinId === BtcCoinMap.bitcoinTestnet
+      );
+      this.xpub = xpub;
     }
-    this.coinType = coinType;
+    this.coinId = coinId;
     this.addressDB = addressDb;
     this.transactionDB = transactionDb;
-    const hash = crypto
-      .createHash('sha256')
-      .update(xpub)
-      .digest('hex')
-      .slice(0, 24); // We need to use first 32 characters, but blockcypher allows max of 25
 
-    this.external = `r${hash}`;
-    this.internal = `c${hash}`;
     logger.info('Wallet data', {
-      coin: this.coinType,
-      internal: this.internal,
-      external: this.external
+      coin: this.coinId
     });
 
-    switch (coinType) {
-      case BTCCOINS.btc.abbr:
+    switch (coinId) {
+      case BtcCoinMap.bitcoin:
         this.network = bitcoin.networks.bitcoin;
         break;
 
-      case BTCCOINS.btct.abbr:
+      case BtcCoinMap.bitcoinTestnet:
         this.network = bitcoin.networks.testnet;
         break;
 
-      case BTCCOINS.ltc.abbr:
+      case BtcCoinMap.litecoin:
         this.network = networks.litecoin;
         break;
 
-      case BTCCOINS.dash.abbr:
+      case BtcCoinMap.dash:
         this.network = networks.dash;
         break;
 
-      case BTCCOINS.doge.abbr:
+      case BtcCoinMap.dogecoin:
         this.network = networks.dogecoin;
         break;
 
@@ -140,8 +140,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     if (this.addressDB) {
       const cacheResult = await this.addressDB.getChainIndex({
         address,
-        walletId: this.walletId,
-        coinType: this.coinType
+        accountId: this.accountId
       });
       if (cacheResult) {
         return cacheResult;
@@ -154,10 +153,11 @@ export default class BitcoinWallet implements Partial<IWallet> {
       this.addressDB.insert({
         address,
         walletId: this.walletId,
-        coinType: this.coinType,
+        coinId: this.coinId,
         chainIndex: res.chainIndex,
         addressIndex: res.addressIndex,
-        isSegwit: res.isSegwit
+        isSegwit: res.isSegwit,
+        accountId: this.accountId
       });
     }
 
@@ -172,7 +172,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     let chainIndex = -1;
     let addressIndex = -1;
     const isSegwit =
-      this.zpub !== undefined &&
+      this.modifiedZpub !== undefined &&
       (address.startsWith('bc') || address.startsWith('tb'));
 
     if (isSegwit) {
@@ -181,7 +181,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
           address ===
           getSegwitAddress(
             this.modifiedZpub || '',
-            this.coinType === BTCCOINS.btct.abbr,
+            this.coinId === BtcCoinMap.bitcoin,
             this.network,
             0,
             i
@@ -196,7 +196,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
           address ===
           getSegwitAddress(
             this.modifiedZpub || '',
-            this.coinType === BTCCOINS.btct.abbr,
+            this.coinId === BtcCoinMap.bitcoinTestnet,
             this.network,
             1,
             i
@@ -248,7 +248,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
   }
 
   async getDerivationPath(sdkVersion: string, address: string): Promise<any> {
-    const coinIndex = BTCCOINS[this.coinType].coinIndex;
+    const coinIndex = BTCCOINS[this.coinId].coinIndex;
     const accountIndex = '80000000';
 
     const addressInfo = await this.getChainAddressIndex(address);
@@ -298,7 +298,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       outputList,
       feeRate,
       isSendAll,
-      coinType: this.coinType
+      coinType: this.coinId
     });
 
     if (isSendAll) {
@@ -345,7 +345,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       inputs,
       outputs,
       fee,
-      coin: this.coinType
+      coin: this.coinId
     });
 
     if (!inputs || !outputs) {
@@ -368,7 +368,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
         inputs,
         outputs,
         fee,
-        coin: this.coinType
+        coin: this.coinId
       });
 
       // If we get inputs and outputs then it means there is suffcient
@@ -392,7 +392,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
   ): Promise<{ fees: number; outputs: any }> {
     try {
       logger.verbose('Approximating Txn Fee', {
-        coin: this.coinType
+        coin: this.coinId
       });
 
       const { outputs, fee } = await this.calcTransactionData(
@@ -419,12 +419,12 @@ export default class BitcoinWallet implements Partial<IWallet> {
   ): Promise<{ metaData: string; fees: number; inputs: any; outputs: any }> {
     try {
       logger.verbose('Generating Meta data', {
-        coin: this.coinType
+        coin: this.coinId
       });
       const purposeIndex = '8000002c';
-      const coin = BTCCOINS[this.coinType];
+      const coin = BTCCOINS[this.coinId];
       if (!coin) {
-        throw new Error(`Cannot find coinType: ${this.coinType}`);
+        throw new Error(`Cannot find coinType: ${this.coinId}`);
       }
       const coinIndex = coin.coinIndex;
       const accountIndex = '80000000';
@@ -529,7 +529,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
     try {
       logger.verbose('Generating unsigned transactions', {
-        coin: this.coinType
+        coin: this.coinId
       });
 
       let myAddresses: string[] = [];
@@ -538,8 +538,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       // This is because the address from the API is of only 1 wallet,
       // Whereas there are 2 (or 4 in case od BTC & BTCT) wallets.
       const addressFromDB = await this.addressDB.getAll({
-        walletId: this.walletId,
-        coinType: this.coinType
+        accountId: this.accountId
       });
 
       if (addressFromDB && addressFromDB.length > 0) {
@@ -569,7 +568,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       for (const input of inputs) {
         const response = await bitcoinServer.transaction
           .getTxnHex({
-            coinType: this.coinType,
+            coinType: BTCCOINS[this.coinId].abbr,
             hash: input.txId
           })
           .request();
@@ -599,7 +598,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     let signedTxn: string | undefined;
     try {
       logger.verbose('Generating signed transaction', {
-        coin: this.coinType
+        coin: this.coinId
       });
       signedTxn = createSegwitSignedTransaction(
         unsignedTransaction,
@@ -646,7 +645,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     const xResp = await v2Server
       .getUsedAddresses({
         xpub: this.xpub,
-        coinType: this.coinType
+        coinType: BTCCOINS[this.coinId].abbr
       })
       .request();
 
@@ -663,48 +662,16 @@ export default class BitcoinWallet implements Partial<IWallet> {
         const addressIndex = parseInt(pathArr[pathArr.length - 1], 10);
 
         addressDbList.push({
+          accountId: this.accountId,
           address,
           walletId: this.walletId,
-          coinType: this.coinType,
+          coinId: this.coinId,
           chainIndex,
           addressIndex,
           isSegwit: false
         });
       }
       await this.addressDB.insertMany(addressDbList);
-    }
-
-    if (this.zpub) {
-      const zResp = await v2Server
-        .getUsedAddresses({
-          xpub: this.zpub,
-          coinType: this.coinType
-        })
-        .request();
-
-      if (zResp.data.tokens && zResp.data.tokens.length > 0) {
-        const addressDbList = [];
-        for (const token of zResp.data.tokens) {
-          const { name: address, path, type } = token;
-          if (type !== 'XPUBAddress') {
-            continue;
-          }
-
-          const pathArr = path.split('/');
-          const chainIndex = parseInt(pathArr[pathArr.length - 2], 10);
-          const addressIndex = parseInt(pathArr[pathArr.length - 1], 10);
-
-          addressDbList.push({
-            address,
-            coinType: this.coinType,
-            walletId: this.walletId,
-            chainIndex,
-            addressIndex,
-            isSegwit: true
-          });
-        }
-        await this.addressDB.insertMany(addressDbList);
-      }
     }
   }
 
@@ -713,12 +680,12 @@ export default class BitcoinWallet implements Partial<IWallet> {
     index: number,
     preferSegwit?: boolean
   ) {
-    const isSegwit = this.zpub !== undefined && !!preferSegwit;
+    const isSegwit = this.modifiedZpub !== undefined && !!preferSegwit;
     let address: string | undefined;
     if (isSegwit) {
       address = getSegwitAddress(
         this.modifiedZpub || '',
-        this.coinType === BTCCOINS.btct.abbr,
+        this.coinId === BTCCOINS.btct.abbr,
         this.network,
         chain,
         index
@@ -738,7 +705,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     }
 
     logger.info('New addresses', {
-      coinType: this.coinType,
+      coinType: this.coinId,
       address,
       chain,
       index,
@@ -747,9 +714,10 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
     if (this.addressDB) {
       this.addressDB.insert({
+        accountId: this.accountId,
         address,
         walletId: this.walletId,
-        coinType: this.coinType,
+        coinId: this.coinId,
         chainIndex: chain,
         addressIndex: index,
         isSegwit
@@ -766,8 +734,8 @@ export default class BitcoinWallet implements Partial<IWallet> {
     const resp = await v2Server
       .getUsedAddresses(
         {
-          xpub: isSegwit ? this.zpub || '' : this.xpub,
-          coinType: this.coinType
+          xpub: this.xpub,
+          coinType: BTCCOINS[this.coinId].abbr
         },
         isRefresh
       )
@@ -796,9 +764,10 @@ export default class BitcoinWallet implements Partial<IWallet> {
       if (this.addressDB) {
       }
       addressDbList.push({
+        accountId: this.accountId,
         address,
         walletId: this.walletId,
-        coinType: this.coinType,
+        coinId: this.coinId,
         chainIndex,
         addressIndex,
         isSegwit
@@ -830,7 +799,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
     const response: AxiosResponse = await v2Server
       .getUtxo({
-        coinType: this.coinType,
+        coinType: BTCCOINS[this.coinId].abbr,
         xpub
       })
       .request();
@@ -865,7 +834,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     if (!this.transactionDB) {
       throw new Error('Transaction DB is required for this action');
     }
-    const key = `utxo-${this.external}`;
+    const key = `utxo-${this.xpub}`;
     const cachedUtxos: any[] | undefined = mcache.get(key);
 
     // Release all the blocked UTXOs if the timeout has expired.
@@ -873,7 +842,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     // if they are not included in any transaction. This also shouldn't
     // cause any issue if the UTXO has already been used. In that case, the
     // blockchain itself will identify it as spent.
-    await this.transactionDB?.releaseBlockedTxns(this.coinType);
+    await this.transactionDB?.releaseBlockedTxns();
 
     if (cachedUtxos) {
       const processedUtxos: any[] = [];
@@ -890,11 +859,11 @@ export default class BitcoinWallet implements Partial<IWallet> {
           });
         })
       );
-      logger.info('UTXO from cache', { coin: this.coinType });
+      logger.info('UTXO from cache', { coin: this.coinId });
 
       logger.debug('UTXO from cache', {
         cachedUtxos: processedUtxos,
-        coin: this.coinType
+        coin: this.coinId
       });
       return processedUtxos;
     }
@@ -903,12 +872,6 @@ export default class BitcoinWallet implements Partial<IWallet> {
     const xUtxo = await this.fetchUtxos(this.xpub);
 
     utxos.push(...xUtxo);
-
-    if (this.zpub !== undefined) {
-      const zUtxo = await this.fetchUtxos(this.zpub);
-
-      utxos.push(...zUtxo);
-    }
 
     const includedUtxoMap: { [key: string]: boolean } = {};
     const utxoList = [];
@@ -923,36 +886,27 @@ export default class BitcoinWallet implements Partial<IWallet> {
     }
 
     mcache.set(key, utxoList, 90);
-    logger.debug('All Utxos', { utxoList, coin: this.coinType });
+    logger.debug('All Utxos', { utxoList, coin: this.coinId });
     return utxoList;
   }
 
   private clearAllUtxoCache() {
-    const key = `utxo-${this.external}`;
+    const key = `utxo-${this.xpub}`;
     mcache.del(key);
 
     v2Server
       .getUtxo({
-        coinType: this.coinType,
+        coinType: BTCCOINS[this.coinId].abbr,
         xpub: this.xpub
       })
       .clearCache();
-
-    if (this.zpub !== undefined) {
-      v2Server
-        .getUtxo({
-          coinType: this.coinType,
-          xpub: this.zpub
-        })
-        .clearCache();
-    }
   }
 
   private async newAddress(
     chain: number,
     _inRecursive?: boolean
   ): Promise<string> {
-    const isSegwit = this.zpub !== undefined;
+    const isSegwit = this.modifiedZpub !== undefined;
 
     const data = await this.getUsedAddressListFromServer(isSegwit);
 

@@ -316,7 +316,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       outputList,
       feeRate,
       isSendAll,
-      coinType: this.coinId
+      coinId: this.coinId
     });
 
     if (isSendAll) {
@@ -442,7 +442,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       const purposeIndex = '8000002c';
       const coin = BTCCOINS[this.coinId];
       if (!coin) {
-        throw new Error(`Cannot find coinType: ${this.coinId}`);
+        throw new Error(`Cannot find coinId: ${this.coinId}`);
       }
       const coinIndex = coin.coinIndex;
       const accountIndex = '80000000';
@@ -723,7 +723,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     }
 
     logger.info('New addresses', {
-      coinType: this.coinId,
+      coinId: this.coinId,
       address,
       chain,
       index,

@@ -82,9 +82,9 @@ export default class BitcoinWallet implements Partial<IWallet> {
     this.accountId = accountId;
     if (
       accountType === BitcoinAccountTypes.nativeSegwit &&
-      BTCCOINS[coinId].supportedAccountTypes.includes(
-        BitcoinAccountTypes.nativeSegwit
-      )
+      BTCCOINS[coinId].supportedAccountTypes
+        .map(e => e.id)
+        .includes(BitcoinAccountTypes.nativeSegwit)
     ) {
       this.modifiedZpub = convertZpub(
         xpub,
@@ -124,6 +124,24 @@ export default class BitcoinWallet implements Partial<IWallet> {
       default:
         throw new Error('Please Provide a Valid Coin Type');
     }
+  }
+
+  private static hardenPath(hex: string) {
+    let s = '';
+    for (let i = 0; i < hex.length / 2; i++) {
+      s = hex.slice(i * 2, i * 2 + 2) + s;
+    }
+
+    return s;
+  }
+
+  public static getDerivationPath(accountIndex: number, _accountType: string) {
+    return (
+      intToUintByte(3, 8) +
+      BitcoinWallet.hardenPath(intToUintByte(44, 8 * 4)) +
+      BitcoinWallet.hardenPath(intToUintByte(0, 8 * 4)) +
+      BitcoinWallet.hardenPath(intToUintByte(accountIndex, 8 * 4))
+    );
   }
 
   public async newReceiveAddress(): Promise<string> {

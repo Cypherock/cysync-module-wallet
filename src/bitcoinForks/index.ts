@@ -201,7 +201,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
           address ===
           getSegwitAddress(
             this.modifiedZpub || '',
-            this.coinId === BtcCoinMap.bitcoin,
+            this.coinId === BtcCoinMap.bitcoinTestnet,
             this.network,
             0,
             i
@@ -269,7 +269,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
   async getDerivationPath(sdkVersion: string, address: string): Promise<any> {
     const coinIndex = BTCCOINS[this.coinId].coinIndex;
-    const accountIndex = '80000000';
+    const accountIndex = intToUintByte(0x80000000 + this.accountIndex, 8 * 4);
 
     const addressInfo = await this.getChainAddressIndex(address);
 
@@ -710,7 +710,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     if (isSegwit) {
       address = getSegwitAddress(
         this.modifiedZpub || '',
-        this.coinId === BTCCOINS.btct.abbr,
+        this.coinId === BtcCoinMap.bitcoinTestnet,
         this.network,
         chain,
         index

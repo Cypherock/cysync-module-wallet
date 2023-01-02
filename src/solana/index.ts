@@ -71,6 +71,7 @@ export default class SolanaWallet implements IWallet {
   public getDerivationPath(sdkVersion: string): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
+    // TODO: ADD ACCOUNT INDEX HERE
     let accountIndex = '00000000'; // used in account type1
     let chainIndex = '00000000'; // used in account type2
     const addressIndex = '00000000'; // unused value for Solana

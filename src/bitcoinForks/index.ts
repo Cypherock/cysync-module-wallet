@@ -81,9 +81,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     this.walletId = walletId;
     this.accountIndex = accountIndex;
     this.accountId = accountId;
-    this.accountType = accountType
-      ? accountType
-      : BitcoinAccountTypes.nativeSegwit;
+    this.accountType = accountType ? accountType : BitcoinAccountTypes.legacy;
     if (
       accountType === BitcoinAccountTypes.nativeSegwit &&
       BTCCOINS[coinId].supportedAccountTypes

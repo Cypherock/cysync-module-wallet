@@ -61,7 +61,6 @@ export default class NearWallet implements IWallet {
   public getDerivationPath(sdkVersion: string): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
-    // TODO: ADD ACCOUNT INDEX HERE
     const accountIndex = '80000000';
     const chainIndex = '80000000';
 

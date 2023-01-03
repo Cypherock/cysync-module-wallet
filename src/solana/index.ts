@@ -71,9 +71,8 @@ export default class SolanaWallet implements IWallet {
   public getDerivationPath(sdkVersion: string): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
-    // TODO: ADD ACCOUNT INDEX HERE
-    let accountIndex = '00000000'; // used in account type1
-    let chainIndex = '00000000'; // used in account type2
+    let accountIndex = '80000000'; // used in account type1
+    let chainIndex = '80000000'; // used in account type2
     const addressIndex = '00000000'; // unused value for Solana
 
     if (this.accountType === SolanaAccountTypes.type1)
@@ -115,11 +114,11 @@ export default class SolanaWallet implements IWallet {
       });
       const purposeIndex = '8000002c';
       const coinIndex = this.coin.coinIndex;
-      let accountIndex = '00000000';
+      let accountIndex = '80000000';
 
       const inputCount = 1;
-      let chainIndex = '00000000';
-      const addressIndex = '00000000';
+      let chainIndex = '80000000';
+      const addressIndex = '80000000';
 
       if (this.accountType === SolanaAccountTypes.type1)
         accountIndex = intToUintByte(0x80000000 + this.index, 32);

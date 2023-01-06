@@ -10,6 +10,7 @@ import {
   COINS,
   EthCoinData,
   NearCoinData,
+  SolanaAccountTypes,
   SolanaCoinData
 } from '@cypherock/communication';
 import { AddressDB, TransactionDB } from '@cypherock/database';
@@ -46,11 +47,16 @@ const newWallet = ({
   }
 
   if (coin instanceof EthCoinData) {
-    return new EthereumWallet(xpub, coin);
+    return new EthereumWallet(accountIndex, xpub, coin);
   } else if (coin instanceof NearCoinData) {
-    return new NearWallet(xpub, coin);
+    return new NearWallet(accountIndex, xpub, coin);
   } else if (coin instanceof SolanaCoinData) {
-    return new SolanaWallet(xpub, coin);
+    return new SolanaWallet(
+      accountIndex,
+      accountType || SolanaAccountTypes.type1,
+      xpub,
+      coin
+    );
   }
 
   return new BitcoinWallet({

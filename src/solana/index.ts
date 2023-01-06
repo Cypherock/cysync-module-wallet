@@ -1,6 +1,8 @@
 import {
   FeatureName,
   isFeatureEnabled,
+  SolanaAccountTypeDetails,
+  SolanaAccountTypes,
   SolanaCoinData
 } from '@cypherock/communication';
 import IWallet from '../interface/wallet';
@@ -24,13 +26,42 @@ export default class SolanaWallet implements IWallet {
   solanaPublicKey: string;
   network: string;
   coin: SolanaCoinData;
+  index: number;
+  accountType: string;
 
-  constructor(xpub: string, coin: SolanaCoinData) {
+  constructor(
+    index: number,
+    accountType: string,
+    xpub: string,
+    coin: SolanaCoinData
+  ) {
+    this.index = index;
+    this.accountType = accountType;
     this.xpub = xpub;
     this.coin = coin;
     this.network = coin.network;
     this.address = generateSolanaAddress(this.xpub);
     this.solanaPublicKey = base_decode(this.address).toString('hex');
+  }
+
+  public static getDerivationPath(accountIndex: number, _accountType: string) {
+    let derivationPath =
+      intToUintByte(0x80000000 + 44, 8 * 4) +
+      intToUintByte(0x80000000 + 501, 8 * 4);
+    let derivationDepth = 2;
+
+    if (_accountType === SolanaAccountTypes.type1) {
+      derivationPath += intToUintByte(0x80000000 + accountIndex, 32);
+      derivationDepth = 3;
+    } else if (_accountType === SolanaAccountTypes.type2) {
+      derivationPath +=
+        '80000000' + intToUintByte(0x80000000 + accountIndex, 32);
+      derivationDepth = 4;
+    }
+
+    return (
+      intToUintByte(derivationDepth, 8) + derivationPath + intToUintByte(0, 64) // dummy chain id
+    );
   }
 
   newReceiveAddress(): string {
@@ -40,9 +71,14 @@ export default class SolanaWallet implements IWallet {
   public getDerivationPath(sdkVersion: string): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
-    const accountIndex = '80000000';
-    const chainIndex = '80000000';
-    const addressIndex = '80000001';
+    let accountIndex = '80000000'; // used in account type1
+    let chainIndex = '80000000'; // used in account type2
+    const addressIndex = '00000000'; // unused value for Solana
+
+    if (this.accountType === SolanaAccountTypes.type1)
+      accountIndex = intToUintByte(0x80000000 + this.index, 32);
+    else if (this.accountType === SolanaAccountTypes.type2)
+      chainIndex = intToUintByte(0x80000000 + this.index, 32);
 
     const contractDummyPadding = '00';
     const longChainId = isFeatureEnabled(
@@ -57,7 +93,8 @@ export default class SolanaWallet implements IWallet {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      intToUintByte(0, longChainId ? 64 : 8)
+      intToUintByte(0, longChainId ? 64 : 8) +
+      SolanaAccountTypeDetails[this.accountType].identifier
     );
   }
 
@@ -77,11 +114,17 @@ export default class SolanaWallet implements IWallet {
       });
       const purposeIndex = '8000002c';
       const coinIndex = this.coin.coinIndex;
-      const accountIndex = '80000000';
+      let accountIndex = '80000000';
 
       const inputCount = 1;
-      const chainIndex = '80000000';
-      const addressIndex = '80000001';
+      let chainIndex = '80000000';
+      const addressIndex = '80000000';
+
+      if (this.accountType === SolanaAccountTypes.type1)
+        accountIndex = intToUintByte(0x80000000 + this.index, 32);
+      else if (this.accountType === SolanaAccountTypes.type2)
+        chainIndex = intToUintByte(0x80000000 + this.index, 32);
+
       const inputString = chainIndex + addressIndex;
 
       const outputCount = 1;
@@ -111,7 +154,8 @@ export default class SolanaWallet implements IWallet {
         decimal +
         contractDummyPadding +
         intToUintByte(0, longChainId ? 64 : 8) +
-        (longChainId ? '00' : '')
+        (longChainId ? '00' : '') +
+        SolanaAccountTypeDetails[this.accountType].identifier
       );
     } catch (e) {
       logger.error('Error generating metadata', e);

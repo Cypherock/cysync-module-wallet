@@ -24,8 +24,10 @@ export default class NearWallet implements IWallet {
   functionCallGasAmount: string;
   newAccountAmount: string;
   coin: NearCoinData;
+  addressIndex: number;
 
-  constructor(xpub: string, coin: NearCoinData) {
+  constructor(addressIndex: number, xpub: string, coin: NearCoinData) {
+    this.addressIndex = addressIndex;
     this.xpub = xpub;
     this.coin = coin;
     this.network = coin.network;
@@ -40,6 +42,18 @@ export default class NearWallet implements IWallet {
     this.newAccountAmount = '100000000000000000000000';
   }
 
+  public static getDerivationPath(addressIndex: number, _accountType: string) {
+    return (
+      intToUintByte(5, 8) +
+      intToUintByte(0x80000000 + 44, 8 * 4) +
+      intToUintByte(0x80000000 + 397, 8 * 4) +
+      intToUintByte(0x80000000, 8 * 4) +
+      intToUintByte(0x80000000, 8 * 4) +
+      intToUintByte(0x80000001 + addressIndex, 8 * 4) +
+      intToUintByte(0, 64) // dummy chain id
+    );
+  }
+
   newReceiveAddress(): string {
     return this.address;
   }
@@ -49,7 +63,6 @@ export default class NearWallet implements IWallet {
     const coinIndex = this.coin.coinIndex;
     const accountIndex = '80000000';
     const chainIndex = '80000000';
-    const addressIndex = '80000001';
 
     let contractDummyPadding;
     if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion))
@@ -66,9 +79,10 @@ export default class NearWallet implements IWallet {
       coinIndex +
       accountIndex +
       chainIndex +
-      addressIndex +
+      intToUintByte(0x80000001 + this.addressIndex, 32) +
       contractDummyPadding +
-      intToUintByte(0, longChainId ? 64 : 8)
+      intToUintByte(0, longChainId ? 64 : 8) +
+      intToUintByte(0, 16)
     );
   }
 
@@ -80,7 +94,6 @@ export default class NearWallet implements IWallet {
     const coinIndex = this.coin.coinIndex;
     const accountIndex = '80000000';
     const chainIndex = '80000000';
-    const addressIndex = '80000001';
 
     let contractDummyPadding;
     if (isFeatureEnabled(FeatureName.TokenNameRestructure, sdkVersion))
@@ -97,9 +110,10 @@ export default class NearWallet implements IWallet {
       coinIndex +
       accountIndex +
       chainIndex +
-      addressIndex +
+      intToUintByte(0x80000001 + this.addressIndex, 8 * 4) +
       contractDummyPadding +
       intToUintByte(1, longChainId ? 64 : 8) +
+      intToUintByte(0, 16) +
       acc.padEnd(66, '0')
     );
   }
@@ -153,7 +167,7 @@ export default class NearWallet implements IWallet {
 
       const inputCount = 1;
       const chainIndex = '80000000';
-      const addressIndex = '80000001';
+      const addressIndex = intToUintByte(0x80000001 + this.addressIndex, 8 * 4);
       const inputString = chainIndex + addressIndex;
 
       const outputCount = 1;
@@ -195,7 +209,8 @@ export default class NearWallet implements IWallet {
         (addAccount
           ? intToUintByte(1, longChainId ? 64 : 8)
           : intToUintByte(0, longChainId ? 64 : 8)) +
-        (longChainId ? '00' : '')
+        (longChainId ? '00' : '') +
+        intToUintByte(0, 16) // account type
       );
     } catch (e) {
       logger.error('Error generating metadata', e);

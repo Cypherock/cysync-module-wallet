@@ -4,7 +4,8 @@ import {
   BtcCoinMap,
   FeatureName,
   isFeatureEnabled,
-  BitcoinAccountTypes
+  BitcoinAccountTypes,
+  BitcoinAccountTypeDetails
 } from '@cypherock/communication';
 import {
   bitcoin as bitcoinServer,
@@ -52,7 +53,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
   addressDB: AddressDB | undefined;
   transactionDB: TransactionDB | undefined;
   walletId: string;
-  accountType?: string;
+  accountType: string;
   accountIndex: number;
   accountId: string;
 
@@ -80,6 +81,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     this.walletId = walletId;
     this.accountIndex = accountIndex;
     this.accountId = accountId;
+    this.accountType = accountType ? accountType : BitcoinAccountTypes.legacy;
     if (
       accountType === BitcoinAccountTypes.nativeSegwit &&
       BTCCOINS[coinId].supportedAccountTypes
@@ -126,21 +128,19 @@ export default class BitcoinWallet implements Partial<IWallet> {
     }
   }
 
-  private static hardenPath(hex: string) {
-    let s = '';
-    for (let i = 0; i < hex.length / 2; i++) {
-      s = hex.slice(i * 2, i * 2 + 2) + s;
-    }
-
-    return s;
-  }
-
-  public static getDerivationPath(accountIndex: number, _accountType: string) {
+  public static getDerivationPath(
+    accountIndex: number,
+    _accountType: string,
+    coinIndex: string
+  ) {
+    const purposeIndex =
+      _accountType === BitcoinAccountTypes.nativeSegwit ? 84 : 44;
     return (
       intToUintByte(3, 8) +
-      BitcoinWallet.hardenPath(intToUintByte(44, 8 * 4)) +
-      BitcoinWallet.hardenPath(intToUintByte(0, 8 * 4)) +
-      BitcoinWallet.hardenPath(intToUintByte(accountIndex, 8 * 4))
+      intToUintByte(0x80000000 + purposeIndex, 8 * 4) +
+      coinIndex +
+      intToUintByte(0x80000000 + accountIndex, 8 * 4) +
+      intToUintByte(0, 64)
     );
   }
 
@@ -199,7 +199,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
           address ===
           getSegwitAddress(
             this.modifiedZpub || '',
-            this.coinId === BtcCoinMap.bitcoin,
+            this.coinId === BtcCoinMap.bitcoinTestnet,
             this.network,
             0,
             i
@@ -267,11 +267,14 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
   async getDerivationPath(sdkVersion: string, address: string): Promise<any> {
     const coinIndex = BTCCOINS[this.coinId].coinIndex;
-    const accountIndex = '80000000';
+    const accountIndex = intToUintByte(0x80000000 + this.accountIndex, 8 * 4);
 
     const addressInfo = await this.getChainAddressIndex(address);
 
-    const purposeIndex = addressInfo.isSegwit ? '80000054' : '8000002c';
+    const purposeIndex =
+      this.accountType === BitcoinAccountTypes.nativeSegwit
+        ? '80000054'
+        : '8000002c';
     const chainIndex = intToUintByte(addressInfo.chainIndex, 32);
     const addressIndex = intToUintByte(addressInfo.addressIndex, 32);
     let contractDummyPadding;
@@ -290,7 +293,8 @@ export default class BitcoinWallet implements Partial<IWallet> {
       chainIndex +
       addressIndex +
       contractDummyPadding +
-      intToUintByte(0, longChainId ? 64 : 8)
+      intToUintByte(0, longChainId ? 64 : 8) +
+      intToUintByte(0, 16)
     );
   }
 
@@ -445,7 +449,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
         throw new Error(`Cannot find coinId: ${this.coinId}`);
       }
       const coinIndex = coin.coinIndex;
-      const accountIndex = '80000000';
+      const accountIndex = intToUintByte(0x80000000 + this.accountIndex, 8 * 4);
 
       const { inputs, outputs, fee } = await this.calcTransactionData(
         outputList,
@@ -511,7 +515,8 @@ export default class BitcoinWallet implements Partial<IWallet> {
           decimalDummyPadding +
           contractDummyPadding +
           intToUintByte(0, longChainId ? 64 : 8) + // Dummy chain Index
-          (longChainId ? '00' : ''), // not a harmony address
+          (longChainId ? '00' : '') + // not a harmony address
+          BitcoinAccountTypeDetails[this.accountType].identifier,
         fees: fee,
         inputs,
         outputs
@@ -703,7 +708,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     if (isSegwit) {
       address = getSegwitAddress(
         this.modifiedZpub || '',
-        this.coinId === BTCCOINS.btct.abbr,
+        this.coinId === BtcCoinMap.bitcoinTestnet,
         this.network,
         chain,
         index

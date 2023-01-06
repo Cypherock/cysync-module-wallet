@@ -19,6 +19,11 @@ import { WalletError, WalletErrorType } from '../errors';
 import { bufArrToArr } from '@ethereumjs/util/dist/bytes';
 import { formatHarmonyAddress } from '../utils/formatEthAddress';
 import { toHexString } from '../utils/uint8ArrayFromHexString';
+import {
+  addTypeFields,
+  MessageData,
+  MessageData_MessageType
+} from './eip712MsgData.pb';
 
 // In 2 places, put them in one place
 const intToUintByte = (ele: any, radix: number) => {
@@ -425,8 +430,7 @@ export default class EthereumWallet implements IWallet {
       ]
     };
   }
-
-  async generateMessageHex(message: string): Promise<string> {
+  async generatePersonalSignMessage(message: string, type: number) {
     if (!message.startsWith('0x')) {
       throw new Error('Message should be in hex');
     }
@@ -436,16 +440,47 @@ export default class EthereumWallet implements IWallet {
       message
     });
 
-    const messageBuffer = Buffer.from(message.slice(2), 'hex');
-    const prefixBuffer = Buffer.from(
-      '\x19Ethereum Signed Message:\n' + messageBuffer.length
-    );
-    const dataBuffer = Buffer.concat([prefixBuffer, messageBuffer]);
-    const dataToSignHex = Buffer.from(dataBuffer).toString('hex');
+    const messageObj = MessageData.fromJSON({
+      messageType: type,
+      dataBytes: new Uint8Array(Buffer.from(message.slice(2), 'hex'))
+    });
 
-    logger.verbose('Generated message hex', { dataToSignHex });
+    const dataToSend = Buffer.from(
+      MessageData.encode(messageObj).finish()
+    ).toString('hex');
 
-    return dataToSignHex;
+    logger.verbose('Generated message hex', { dataToSend });
+
+    return dataToSend;
+  }
+
+  async generateTypedDataMessage(message: string) {
+    try {
+      const messageObj = MessageData.fromJSON({
+        messageType: MessageData_MessageType.SIGN_TYPED_DATA,
+        eip712data: addTypeFields(JSON.parse(message))
+      });
+      const dataToSend = Buffer.from(
+        MessageData.encode(messageObj).finish()
+      ).toString('hex');
+      logger.verbose('Generated message hex', { dataToSend });
+
+      return dataToSend;
+    } catch (e) {
+      throw new Error(`Invalid message detected, ${e}`);
+    }
+  }
+
+  async generateMessageHex(message: string, type: number): Promise<string> {
+    switch (type) {
+      case MessageData_MessageType.ETH_SIGN:
+      case MessageData_MessageType.PERSONAL_SIGN:
+        return this.generatePersonalSignMessage(message, type);
+      case MessageData_MessageType.SIGN_TYPED_DATA:
+        return this.generateTypedDataMessage(message);
+      default:
+        throw new Error('Unsupported message type: ' + type);
+    }
   }
 
   async getTotalBalance(contractAddress?: string) {

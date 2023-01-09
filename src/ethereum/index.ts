@@ -2,6 +2,7 @@ import Common from '@ethereumjs/common';
 import { TxData, TransactionFactory } from '@ethereumjs/tx';
 import {
   EthCoinData,
+  EthCoinMap,
   ETHCOINS,
   FeatureName,
   isFeatureEnabled
@@ -40,8 +41,10 @@ export default class EthereumWallet implements IWallet {
   network: string;
   coin: EthCoinData;
   evmAddress: string;
+  accountIndex: number;
 
-  constructor(xpub: string, coin: EthCoinData, node = 0) {
+  constructor(accountIndex: number, xpub: string, coin: EthCoinData, node = 0) {
+    this.accountIndex = accountIndex;
     this.node = node;
     this.xpub = xpub;
     this.coin = coin;
@@ -92,9 +95,23 @@ export default class EthereumWallet implements IWallet {
       }
     ];
     this.evmAddress = this.address;
-    if (this.coin.coinListId === ETHCOINS.one.coinListId) {
+    if (this.coin.coinListId === ETHCOINS[EthCoinMap.harmony].coinListId) {
       this.address = formatHarmonyAddress(this.evmAddress);
     }
+  }
+
+  public static getDerivationPath(
+    accountIndex: number,
+    _accountType: string,
+    chainId: number
+  ) {
+    return (
+      intToUintByte(3, 8) +
+      intToUintByte(0x80000000 + 44, 8 * 4) +
+      intToUintByte(0x80000000 + 60, 8 * 4) +
+      intToUintByte(0x80000000 + accountIndex, 8 * 4) +
+      intToUintByte(chainId, 64)
+    );
   }
 
   public async setupNewWallet() {
@@ -185,7 +202,7 @@ export default class EthereumWallet implements IWallet {
     });
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
-    const accountIndex = '80000000';
+    const accountIndex = intToUintByte(0x80000000 + this.accountIndex, 8 * 4);
 
     const inputCount = 1;
     const chainIndex = 0;
@@ -242,7 +259,8 @@ export default class EthereumWallet implements IWallet {
       decimal +
       contract +
       intToUintByte(this.coin.chain, longChainId ? 64 : 8) +
-      (longChainId ? intToUintByte(isHarmonyAddress ? 1 : 0, 8) : '') // could be harmony address
+      (longChainId ? intToUintByte(isHarmonyAddress ? 1 : 0, 8) : '') + // could be harmony address
+      intToUintByte(0, 16) // account type
     );
   }
 
@@ -277,7 +295,10 @@ export default class EthereumWallet implements IWallet {
     });
 
     let evmAddress = outputAddress;
-    if (chain === ETHCOINS.one?.chain && outputAddress.startsWith('one1')) {
+    if (
+      chain === ETHCOINS[EthCoinMap.harmony].chain &&
+      outputAddress.startsWith('one1')
+    ) {
       // convert Harmony's bech32 addresses to hexstring address
       // since the recipient is validated, no scope for errors
       const { words } = bech32.decode(outputAddress);
@@ -456,7 +477,6 @@ export default class EthereumWallet implements IWallet {
   public getDerivationPath(sdkVersion: string, contractAbbr = 'ETH'): string {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
-    const accountIndex = '80000000';
     const chainIndex = '00000000';
     //Will only work till the node is < 10
     const addressIndex = '0000000' + this.node;
@@ -480,11 +500,12 @@ export default class EthereumWallet implements IWallet {
     return (
       purposeIndex +
       coinIndex +
-      accountIndex +
+      intToUintByte(0x80000000 + this.accountIndex, 32) +
       chainIndex +
       addressIndex +
       contract +
-      intToUintByte(this.coin.chain, longChainId ? 64 : 8)
+      intToUintByte(this.coin.chain, longChainId ? 64 : 8) +
+      intToUintByte(0, 16)
     );
   }
 }

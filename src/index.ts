@@ -10,6 +10,7 @@ import {
   COINS,
   EthCoinData,
   NearCoinData,
+  SolanaAccountTypes,
   SolanaCoinData
 } from '@cypherock/communication';
 import { AddressDB, TransactionDB } from '@cypherock/database';
@@ -21,41 +22,52 @@ import SolanaWallet from './solana';
 
 //Add support for ethereum here when implemented
 const newWallet = ({
-  coinType,
+  coinId,
   xpub,
   walletId,
   transactionDB,
-  zpub,
-  addressDB
+  addressDB,
+  accountType,
+  accountId,
+  accountIndex
 }: {
-  coinType: string;
+  coinId: string;
   xpub: string;
   walletId: string;
-  zpub?: string;
+  accountType?: string;
+  accountIndex: number;
+  accountId: string;
   addressDB?: AddressDB;
   transactionDB?: TransactionDB;
 }) => {
-  const coin = COINS[coinType.toLowerCase()];
+  const coin = COINS[coinId];
 
   if (!coin) {
-    throw new Error(`Invalid coinType: ${coinType}`);
+    throw new Error(`Invalid coinId: ${coinId}`);
   }
 
   if (coin instanceof EthCoinData) {
-    return new EthereumWallet(xpub, coin);
+    return new EthereumWallet(accountIndex, xpub, coin);
   } else if (coin instanceof NearCoinData) {
-    return new NearWallet(xpub, coin);
+    return new NearWallet(accountIndex, xpub, coin);
   } else if (coin instanceof SolanaCoinData) {
-    return new SolanaWallet(xpub, coin);
+    return new SolanaWallet(
+      accountIndex,
+      accountType || SolanaAccountTypes.base,
+      xpub,
+      coin
+    );
   }
 
   return new BitcoinWallet({
     xpub,
-    coinType,
+    coinId,
     walletId,
-    zpub,
     addressDb: addressDB,
-    transactionDb: transactionDB
+    accountType,
+    transactionDb: transactionDB,
+    accountId,
+    accountIndex
   });
 };
 

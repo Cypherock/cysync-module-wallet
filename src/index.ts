@@ -53,7 +53,7 @@ const newWallet = ({
   } else if (coin instanceof SolanaCoinData) {
     return new SolanaWallet(
       accountIndex,
-      accountType || SolanaAccountTypes.type1,
+      accountType || SolanaAccountTypes.base,
       xpub,
       coin
     );

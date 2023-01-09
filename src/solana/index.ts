@@ -35,6 +35,12 @@ export default class SolanaWallet implements IWallet {
     xpub: string,
     coin: SolanaCoinData
   ) {
+    if (accountType === SolanaAccountTypes.base && index !== 0) {
+      throw new Error(
+        `Invalid account index in solana ${accountType}:${index}`
+      );
+    }
+
     this.index = index;
     this.accountType = accountType;
     this.xpub = xpub;
@@ -45,15 +51,21 @@ export default class SolanaWallet implements IWallet {
   }
 
   public static getDerivationPath(accountIndex: number, _accountType: string) {
+    if (_accountType === SolanaAccountTypes.base && accountIndex !== 0) {
+      throw new Error(
+        `Invalid account index in solana ${_accountType}:${accountIndex}`
+      );
+    }
+
     let derivationPath =
       intToUintByte(0x80000000 + 44, 8 * 4) +
       intToUintByte(0x80000000 + 501, 8 * 4);
     let derivationDepth = 2;
 
-    if (_accountType === SolanaAccountTypes.type1) {
+    if (_accountType === SolanaAccountTypes.ledger) {
       derivationPath += intToUintByte(0x80000000 + accountIndex, 32);
       derivationDepth = 3;
-    } else if (_accountType === SolanaAccountTypes.type2) {
+    } else if (_accountType === SolanaAccountTypes.phantom) {
       derivationPath +=
         '80000000' + intToUintByte(0x80000000 + accountIndex, 32);
       derivationDepth = 4;
@@ -75,9 +87,9 @@ export default class SolanaWallet implements IWallet {
     let chainIndex = '80000000'; // used in account type2
     const addressIndex = '00000000'; // unused value for Solana
 
-    if (this.accountType === SolanaAccountTypes.type1)
+    if (this.accountType === SolanaAccountTypes.ledger)
       accountIndex = intToUintByte(0x80000000 + this.index, 32);
-    else if (this.accountType === SolanaAccountTypes.type2)
+    else if (this.accountType === SolanaAccountTypes.phantom)
       chainIndex = intToUintByte(0x80000000 + this.index, 32);
 
     const contractDummyPadding = '00';
@@ -120,9 +132,9 @@ export default class SolanaWallet implements IWallet {
       let chainIndex = '80000000';
       const addressIndex = '80000000';
 
-      if (this.accountType === SolanaAccountTypes.type1)
+      if (this.accountType === SolanaAccountTypes.ledger)
         accountIndex = intToUintByte(0x80000000 + this.index, 32);
-      else if (this.accountType === SolanaAccountTypes.type2)
+      else if (this.accountType === SolanaAccountTypes.phantom)
         chainIndex = intToUintByte(0x80000000 + this.index, 32);
 
       const inputString = chainIndex + addressIndex;

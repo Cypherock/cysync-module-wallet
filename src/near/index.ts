@@ -27,7 +27,7 @@ export default class NearWallet implements IWallet {
   addressIndex: number;
 
   constructor(addressIndex: number, xpub: string, coin: NearCoinData) {
-    this.addressIndex = addressIndex;
+    this.addressIndex = NearWallet.getModifiedAddressIndex(addressIndex);
     this.xpub = xpub;
     this.coin = coin;
     this.network = coin.network;
@@ -42,6 +42,18 @@ export default class NearWallet implements IWallet {
     this.newAccountAmount = '100000000000000000000000';
   }
 
+  private static getModifiedAddressIndex(index: number) {
+    if (index === 0) {
+      return 1;
+    }
+
+    if (index === 1) {
+      return 0;
+    }
+
+    return index;
+  }
+
   public static getDerivationPath(addressIndex: number, _accountType: string) {
     return (
       intToUintByte(5, 8) +
@@ -49,7 +61,10 @@ export default class NearWallet implements IWallet {
       intToUintByte(0x80000000 + 397, 8 * 4) +
       intToUintByte(0x80000000, 8 * 4) +
       intToUintByte(0x80000000, 8 * 4) +
-      intToUintByte(0x80000001 + addressIndex, 8 * 4) +
+      intToUintByte(
+        0x80000000 + NearWallet.getModifiedAddressIndex(addressIndex),
+        8 * 4
+      ) +
       intToUintByte(0, 64) // dummy chain id
     );
   }
@@ -79,7 +94,7 @@ export default class NearWallet implements IWallet {
       coinIndex +
       accountIndex +
       chainIndex +
-      intToUintByte(0x80000001 + this.addressIndex, 32) +
+      intToUintByte(0x80000000 + this.addressIndex, 32) +
       contractDummyPadding +
       intToUintByte(0, longChainId ? 64 : 8) +
       intToUintByte(0, 16)
@@ -110,7 +125,7 @@ export default class NearWallet implements IWallet {
       coinIndex +
       accountIndex +
       chainIndex +
-      intToUintByte(0x80000001 + this.addressIndex, 8 * 4) +
+      intToUintByte(0x80000000 + this.addressIndex, 8 * 4) +
       contractDummyPadding +
       intToUintByte(1, longChainId ? 64 : 8) +
       intToUintByte(0, 16) +
@@ -167,7 +182,7 @@ export default class NearWallet implements IWallet {
 
       const inputCount = 1;
       const chainIndex = '80000000';
-      const addressIndex = intToUintByte(0x80000001 + this.addressIndex, 8 * 4);
+      const addressIndex = intToUintByte(0x80000000 + this.addressIndex, 8 * 4);
       const inputString = chainIndex + addressIndex;
 
       const outputCount = 1;

@@ -175,12 +175,12 @@ export default class SolanaWallet implements IWallet {
     }
   }
 
-  async generateUnsignedTransaction(
-    receiverAddress: string,
-    amount: BigNumber,
-    isSendAll: boolean,
-    transactionFee: BigNumber
-  ): Promise<{
+  async generateUnsignedTransaction(params: {
+    address: string;
+    amount: BigNumber;
+    isSendAll: boolean;
+    transactionFee: BigNumber;
+  }): Promise<{
     txn: string;
     inputs: Array<{
       value: string;
@@ -189,6 +189,7 @@ export default class SolanaWallet implements IWallet {
     }>;
     outputs: Array<{ value: string; address: string; isMine: boolean }>;
   }> {
+    const { address, amount, isSendAll, transactionFee } = params;
     try {
       const senderAddress = this.address;
       let totalAmount = amount;
@@ -203,10 +204,7 @@ export default class SolanaWallet implements IWallet {
         Buffer.from(base_decode(senderAddress).toString('hex'), 'hex').reverse()
       );
       const receiverPublicKey = PublicKey.decode(
-        Buffer.from(
-          base_decode(receiverAddress).toString('hex'),
-          'hex'
-        ).reverse()
+        Buffer.from(base_decode(address).toString('hex'), 'hex').reverse()
       );
       const recentBlockhash = await getBlockHash(this.coin.network);
       const transaction = new Transaction({
@@ -234,9 +232,9 @@ export default class SolanaWallet implements IWallet {
         ],
         outputs: [
           {
-            address: receiverAddress,
+            address,
             value: totalAmount.toString(),
-            isMine: senderAddress === receiverAddress
+            isMine: senderAddress === address
           }
         ]
       };

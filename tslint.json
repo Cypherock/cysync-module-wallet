@@ -1,6 +1,9 @@
 {
   "defaultSeverity": "error",
   "extends": ["tslint:recommended"],
+  "linterOptions": {
+    "exclude": ["src/**/*.pb.ts"]
+  },
   "jsRules": {},
   "rules": {
     "await-promise": true,

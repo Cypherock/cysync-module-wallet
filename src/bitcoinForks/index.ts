@@ -527,11 +527,11 @@ export default class BitcoinWallet implements Partial<IWallet> {
     }
   }
 
-  public async generateUnsignedTransaction(
-    outputList: Output[],
-    feeRate: number,
-    isSendAll?: boolean
-  ): Promise<{
+  public async generateUnsignedTransaction(params: {
+    outputList: Output[];
+    feeRate: number;
+    isSendAll?: boolean;
+  }): Promise<{
     txn: string;
     amount: string;
     fee: string;
@@ -545,6 +545,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     outputs: Array<{ value: number; address: string; isMine: boolean }>;
     utxoList: string[];
   }> {
+    const { outputList, feeRate, isSendAll } = params;
     // This is because we need to mark our addresses
     if (!this.addressDB) {
       throw new Error('Address DB is required for this action');

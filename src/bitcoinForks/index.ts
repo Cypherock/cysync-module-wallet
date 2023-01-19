@@ -88,10 +88,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
         .map(e => e.id)
         .includes(BitcoinAccountTypes.nativeSegwit)
     ) {
-      this.modifiedZpub = convertZpub(
-        xpub,
-        coinId === BtcCoinMap.bitcoinTestnet
-      );
+      this.modifiedZpub = convertZpub(xpub, false);
       this.xpub = xpub;
     }
     this.coinId = coinId;
@@ -105,10 +102,6 @@ export default class BitcoinWallet implements Partial<IWallet> {
     switch (coinId) {
       case BtcCoinMap.bitcoin:
         this.network = bitcoin.networks.bitcoin;
-        break;
-
-      case BtcCoinMap.bitcoinTestnet:
-        this.network = bitcoin.networks.testnet;
         break;
 
       case BtcCoinMap.litecoin:
@@ -197,13 +190,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       for (let i = 0; i < 1000; i++) {
         if (
           address ===
-          getSegwitAddress(
-            this.modifiedZpub || '',
-            this.coinId === BtcCoinMap.bitcoinTestnet,
-            this.network,
-            0,
-            i
-          )
+          getSegwitAddress(this.modifiedZpub || '', false, this.network, 0, i)
         ) {
           chainIndex = 0;
           addressIndex = i;
@@ -212,13 +199,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
         if (
           address ===
-          getSegwitAddress(
-            this.modifiedZpub || '',
-            this.coinId === BtcCoinMap.bitcoinTestnet,
-            this.network,
-            1,
-            i
-          )
+          getSegwitAddress(this.modifiedZpub || '', false, this.network, 1, i)
         ) {
           chainIndex = 1;
           addressIndex = i;
@@ -708,7 +689,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     if (isSegwit) {
       address = getSegwitAddress(
         this.modifiedZpub || '',
-        this.coinId === BtcCoinMap.bitcoinTestnet,
+        false,
         this.network,
         chain,
         index

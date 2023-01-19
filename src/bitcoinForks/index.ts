@@ -121,20 +121,31 @@ export default class BitcoinWallet implements Partial<IWallet> {
     }
   }
 
-  public static getDerivationPath(
-    accountIndex: number,
-    _accountType: string,
-    coinIndex: string
-  ) {
+  public static getProtocolDerivationPath(params: {
+    accountIndex: number;
+    accountType: string;
+    coinIndex: string;
+  }) {
     const purposeIndex =
-      _accountType === BitcoinAccountTypes.nativeSegwit ? 84 : 44;
+      params.accountType === BitcoinAccountTypes.nativeSegwit ? 84 : 44;
     return (
       intToUintByte(3, 8) +
       intToUintByte(0x80000000 + purposeIndex, 8 * 4) +
-      coinIndex +
-      intToUintByte(0x80000000 + accountIndex, 8 * 4) +
+      params.coinIndex +
+      intToUintByte(0x80000000 + params.accountIndex, 8 * 4) +
       intToUintByte(0, 64)
     );
+  }
+
+  public static getDerivationPath(params: {
+    accountIndex: number;
+    accountType: string;
+    coinIndex: string;
+  }) {
+    const purposeIndex =
+      params.accountType === BitcoinAccountTypes.nativeSegwit ? 84 : 44;
+    const coinIndex = parseInt(params.coinIndex, 16) - 0x80000000;
+    return `m/${purposeIndex}'/${coinIndex}'/${params.accountIndex}'`;
   }
 
   public async newReceiveAddress(): Promise<string> {

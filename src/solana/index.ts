@@ -50,10 +50,17 @@ export default class SolanaWallet implements IWallet {
     this.solanaPublicKey = base_decode(this.address).toString('hex');
   }
 
-  public static getDerivationPath(accountIndex: number, _accountType: string) {
-    if (_accountType === SolanaAccountTypes.base && accountIndex !== 0) {
+  public static getProtocolDerivationPath(params: {
+    accountIndex: number;
+    accountType: string;
+    coinIndex: string;
+  }) {
+    if (
+      params.accountType === SolanaAccountTypes.base &&
+      params.accountIndex !== 0
+    ) {
       throw new Error(
-        `Invalid account index in solana ${_accountType}:${accountIndex}`
+        `Invalid account index in solana ${params.accountType}:${params.accountIndex}`
       );
     }
 
@@ -62,18 +69,44 @@ export default class SolanaWallet implements IWallet {
       intToUintByte(0x80000000 + 501, 8 * 4);
     let derivationDepth = 2;
 
-    if (_accountType === SolanaAccountTypes.ledger) {
-      derivationPath += intToUintByte(0x80000000 + accountIndex, 32);
+    if (params.accountType === SolanaAccountTypes.ledger) {
+      derivationPath += intToUintByte(0x80000000 + params.accountIndex, 32);
       derivationDepth = 3;
-    } else if (_accountType === SolanaAccountTypes.phantom) {
+    } else if (params.accountType === SolanaAccountTypes.phantom) {
       derivationPath +=
-        '80000000' + intToUintByte(0x80000000 + accountIndex, 32);
+        '80000000' + intToUintByte(0x80000000 + params.accountIndex, 32);
       derivationDepth = 4;
     }
 
     return (
       intToUintByte(derivationDepth, 8) + derivationPath + intToUintByte(0, 64) // dummy chain id
     );
+  }
+
+  public static getDerivationPath(params: {
+    accountIndex: number;
+    accountType: string;
+    coinIndex: string;
+  }) {
+    if (
+      params.accountType === SolanaAccountTypes.base &&
+      params.accountIndex !== 0
+    ) {
+      throw new Error(
+        `Invalid account index in solana ${params.accountType}:${params.accountIndex}`
+      );
+    }
+
+    const coinIndex = parseInt(params.coinIndex, 16) - 0x80000000;
+    let path = `m/44'/${coinIndex}'`;
+
+    if (params.accountType === SolanaAccountTypes.ledger) {
+      path += `/${params.accountIndex}'`;
+    } else if (params.accountType === SolanaAccountTypes.phantom) {
+      path += `/0'/${params.accountIndex}'`;
+    }
+
+    return path;
   }
 
   newReceiveAddress(): string {

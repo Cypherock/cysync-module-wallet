@@ -67,7 +67,7 @@ export default class SolanaWallet implements IWallet {
       derivationDepth = 3;
     } else if (_accountType === SolanaAccountTypes.phantom) {
       derivationPath +=
-        '80000000' + intToUintByte(0x80000000 + accountIndex, 32);
+        intToUintByte(0x80000000 + accountIndex, 32) + '80000000';
       derivationDepth = 4;
     }
 
@@ -84,13 +84,14 @@ export default class SolanaWallet implements IWallet {
     const purposeIndex = '8000002c';
     const coinIndex = this.coin.coinIndex;
     let accountIndex = '80000000'; // used in account type1
-    let chainIndex = '80000000'; // used in account type2
+    const chainIndex = '80000000'; // used in account type2
     const addressIndex = '00000000'; // unused value for Solana
 
-    if (this.accountType === SolanaAccountTypes.ledger)
+    if (
+      this.accountType === SolanaAccountTypes.ledger ||
+      this.accountType === SolanaAccountTypes.phantom
+    )
       accountIndex = intToUintByte(0x80000000 + this.index, 32);
-    else if (this.accountType === SolanaAccountTypes.phantom)
-      chainIndex = intToUintByte(0x80000000 + this.index, 32);
 
     const contractDummyPadding = '00';
     const longChainId = isFeatureEnabled(
@@ -129,13 +130,14 @@ export default class SolanaWallet implements IWallet {
       let accountIndex = '80000000';
 
       const inputCount = 1;
-      let chainIndex = '80000000';
+      const chainIndex = '80000000';
       const addressIndex = '80000000';
 
-      if (this.accountType === SolanaAccountTypes.ledger)
+      if (
+        this.accountType === SolanaAccountTypes.ledger ||
+        this.accountType === SolanaAccountTypes.phantom
+      )
         accountIndex = intToUintByte(0x80000000 + this.index, 32);
-      else if (this.accountType === SolanaAccountTypes.phantom)
-        chainIndex = intToUintByte(0x80000000 + this.index, 32);
 
       const inputString = chainIndex + addressIndex;
 

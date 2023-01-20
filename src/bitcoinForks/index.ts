@@ -435,7 +435,10 @@ export default class BitcoinWallet implements Partial<IWallet> {
       logger.verbose('Generating Meta data', {
         coin: this.coinId
       });
-      const purposeIndex = '8000002c';
+      const purposeIndex =
+        this.accountType === BitcoinAccountTypes.nativeSegwit
+          ? '80000054'
+          : '8000002c';
       const coin = BTCCOINS[this.coinId];
       if (!coin) {
         throw new Error(`Cannot find coinId: ${this.coinId}`);

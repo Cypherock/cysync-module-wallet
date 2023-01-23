@@ -147,7 +147,7 @@ export default class NearWallet implements IWallet {
       })
     );
     const totalBalance = balances.reduce(
-      (acc: number, curr: number) => acc + curr,
+      (acc: BigNumber, curr: BigNumber) => acc.plus(curr),
       0
     );
     return {

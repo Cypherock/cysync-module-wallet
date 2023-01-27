@@ -43,18 +43,14 @@ export default class NearWallet implements IWallet {
   }
 
   private static getModifiedAddressIndex(index: number) {
-    if (index === 0) {
-      return 1;
-    }
-
-    if (index === 1) {
-      return 0;
-    }
-
     return index;
   }
 
-  public static getDerivationPath(addressIndex: number, _accountType: string) {
+  public static getProtocolDerivationPath(params: {
+    addressIndex: number;
+    accountType: string;
+    coinIndex: string;
+  }) {
     return (
       intToUintByte(5, 8) +
       intToUintByte(0x80000000 + 44, 8 * 4) +
@@ -62,11 +58,20 @@ export default class NearWallet implements IWallet {
       intToUintByte(0x80000000, 8 * 4) +
       intToUintByte(0x80000000, 8 * 4) +
       intToUintByte(
-        0x80000000 + NearWallet.getModifiedAddressIndex(addressIndex),
+        0x80000000 + NearWallet.getModifiedAddressIndex(params.addressIndex),
         8 * 4
       ) +
       intToUintByte(0, 64) // dummy chain id
     );
+  }
+
+  public static getDerivationPath(params: {
+    addressIndex: number;
+    accountType: string;
+    coinIndex: string;
+  }) {
+    const coinIndex = parseInt(params.coinIndex, 16) - 0x80000000;
+    return `m/44'/${coinIndex}'/0'/0'/${params.addressIndex}'`;
   }
 
   newReceiveAddress(): string {
@@ -142,8 +147,8 @@ export default class NearWallet implements IWallet {
       })
     );
     const totalBalance = balances.reduce(
-      (acc: number, curr: number) => acc + curr,
-      0
+      (acc: BigNumber, curr: string | number) => acc.plus(curr),
+      new BigNumber(0)
     );
     return {
       balance: totalBalance

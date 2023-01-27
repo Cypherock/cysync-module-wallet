@@ -88,10 +88,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
         .map(e => e.id)
         .includes(BitcoinAccountTypes.nativeSegwit)
     ) {
-      this.modifiedZpub = convertZpub(
-        xpub,
-        coinId === BtcCoinMap.bitcoinTestnet
-      );
+      this.modifiedZpub = convertZpub(xpub, false);
       this.xpub = xpub;
     }
     this.coinId = coinId;
@@ -105,10 +102,6 @@ export default class BitcoinWallet implements Partial<IWallet> {
     switch (coinId) {
       case BtcCoinMap.bitcoin:
         this.network = bitcoin.networks.bitcoin;
-        break;
-
-      case BtcCoinMap.bitcoinTestnet:
-        this.network = bitcoin.networks.testnet;
         break;
 
       case BtcCoinMap.litecoin:
@@ -128,20 +121,31 @@ export default class BitcoinWallet implements Partial<IWallet> {
     }
   }
 
-  public static getDerivationPath(
-    accountIndex: number,
-    _accountType: string,
-    coinIndex: string
-  ) {
+  public static getProtocolDerivationPath(params: {
+    accountIndex: number;
+    accountType: string;
+    coinIndex: string;
+  }) {
     const purposeIndex =
-      _accountType === BitcoinAccountTypes.nativeSegwit ? 84 : 44;
+      params.accountType === BitcoinAccountTypes.nativeSegwit ? 84 : 44;
     return (
       intToUintByte(3, 8) +
       intToUintByte(0x80000000 + purposeIndex, 8 * 4) +
-      coinIndex +
-      intToUintByte(0x80000000 + accountIndex, 8 * 4) +
+      params.coinIndex +
+      intToUintByte(0x80000000 + params.accountIndex, 8 * 4) +
       intToUintByte(0, 64)
     );
+  }
+
+  public static getDerivationPath(params: {
+    accountIndex: number;
+    accountType: string;
+    coinIndex: string;
+  }) {
+    const purposeIndex =
+      params.accountType === BitcoinAccountTypes.nativeSegwit ? 84 : 44;
+    const coinIndex = parseInt(params.coinIndex, 16) - 0x80000000;
+    return `m/${purposeIndex}'/${coinIndex}'/${params.accountIndex}'`;
   }
 
   public async newReceiveAddress(): Promise<string> {
@@ -197,13 +201,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
       for (let i = 0; i < 1000; i++) {
         if (
           address ===
-          getSegwitAddress(
-            this.modifiedZpub || '',
-            this.coinId === BtcCoinMap.bitcoinTestnet,
-            this.network,
-            0,
-            i
-          )
+          getSegwitAddress(this.modifiedZpub || '', false, this.network, 0, i)
         ) {
           chainIndex = 0;
           addressIndex = i;
@@ -212,13 +210,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
 
         if (
           address ===
-          getSegwitAddress(
-            this.modifiedZpub || '',
-            this.coinId === BtcCoinMap.bitcoinTestnet,
-            this.network,
-            1,
-            i
-          )
+          getSegwitAddress(this.modifiedZpub || '', false, this.network, 1, i)
         ) {
           chainIndex = 1;
           addressIndex = i;
@@ -443,7 +435,10 @@ export default class BitcoinWallet implements Partial<IWallet> {
       logger.verbose('Generating Meta data', {
         coin: this.coinId
       });
-      const purposeIndex = '8000002c';
+      const purposeIndex =
+        this.accountType === BitcoinAccountTypes.nativeSegwit
+          ? '80000054'
+          : '8000002c';
       const coin = BTCCOINS[this.coinId];
       if (!coin) {
         throw new Error(`Cannot find coinId: ${this.coinId}`);
@@ -709,7 +704,7 @@ export default class BitcoinWallet implements Partial<IWallet> {
     if (isSegwit) {
       address = getSegwitAddress(
         this.modifiedZpub || '',
-        this.coinId === BtcCoinMap.bitcoinTestnet,
+        false,
         this.network,
         chain,
         index

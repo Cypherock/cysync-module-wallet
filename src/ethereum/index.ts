@@ -105,18 +105,29 @@ export default class EthereumWallet implements IWallet {
     }
   }
 
-  public static getDerivationPath(
-    accountIndex: number,
-    _accountType: string,
-    chainId: number
-  ) {
+  public static getProtocolDerivationPath(params: {
+    accountIndex: number;
+    accountType: string;
+    coinIndex: string;
+    chainId: number;
+  }) {
     return (
       intToUintByte(3, 8) +
       intToUintByte(0x80000000 + 44, 8 * 4) +
-      intToUintByte(0x80000000 + 60, 8 * 4) +
-      intToUintByte(0x80000000 + accountIndex, 8 * 4) +
-      intToUintByte(chainId, 64)
+      params.coinIndex +
+      intToUintByte(0x80000000 + params.accountIndex, 8 * 4) +
+      intToUintByte(params.chainId, 64)
     );
+  }
+
+  public static getDerivationPath(params: {
+    accountIndex: number;
+    accountType: string;
+    coinIndex: string;
+    chainId: number;
+  }) {
+    const coinIndex = parseInt(params.coinIndex, 16) - 0x80000000;
+    return `m/44'/${coinIndex}'/${params.accountIndex}'/0/0`;
   }
 
   public async setupNewWallet() {

@@ -20,11 +20,8 @@ import { WalletError, WalletErrorType } from '../errors';
 import { bufArrToArr } from '@ethereumjs/util/dist/bytes';
 import { formatHarmonyAddress } from '../utils/formatEthAddress';
 import { toHexString } from '../utils/uint8ArrayFromHexString';
-import {
-  addTypeFields,
-  MessageData,
-  MessageData_MessageType
-} from './eip712MsgData.pb';
+import { MessageData, MessageData_MessageType } from './eip712MsgData.pb';
+import { addTypeFields } from './typedDataUtils';
 
 // In 2 places, put them in one place
 const intToUintByte = (ele: any, radix: number) => {
@@ -366,7 +363,7 @@ export default class EthereumWallet implements IWallet {
     if (contractData) {
       rawTx = {
         // call from server.
-        nonce: nonce || (await getTransactionCount(this.address, this.network)),
+        nonce: nonce ?? (await getTransactionCount(this.address, this.network)),
         gasPrice: this.web3.utils.toHex(convertedGasPrice.toString()),
         gasLimit: this.web3.utils.toHex(gasLimit),
         to: contractAddress || mixedCaseOutputAddr,
@@ -462,7 +459,7 @@ export default class EthereumWallet implements IWallet {
       ]
     };
   }
-  async generatePersonalSignMessage(message: string, type: number) {
+  private async generatePersonalSignMessage(message: string, type: number) {
     if (!message.startsWith('0x')) {
       throw new Error('Message should be in hex');
     }
@@ -486,7 +483,7 @@ export default class EthereumWallet implements IWallet {
     return dataToSend;
   }
 
-  async generateTypedDataMessage(message: string) {
+  private async generateTypedDataMessage(message: string) {
     try {
       const messageObj = MessageData.fromJSON({
         messageType: MessageData_MessageType.SIGN_TYPED_DATA,

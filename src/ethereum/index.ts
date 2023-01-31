@@ -20,6 +20,8 @@ import { WalletError, WalletErrorType } from '../errors';
 import { bufArrToArr } from '@ethereumjs/util/dist/bytes';
 import { formatHarmonyAddress } from '../utils/formatEthAddress';
 import { toHexString } from '../utils/uint8ArrayFromHexString';
+import { MessageData, MessageData_MessageType } from './eip712MsgData.pb';
+import { addTypeFields } from './typedDataUtils';
 
 // In 2 places, put them in one place
 const intToUintByte = (ele: any, radix: number) => {
@@ -276,15 +278,17 @@ export default class EthereumWallet implements IWallet {
   }
 
   // gas price in gwei
-  async generateUnsignedTransaction(
-    outputAddress: string,
-    amount: BigNumber,
-    gasPrice: number,
-    gasLimit: number,
-    chain = 1,
-    isSendAll: boolean,
-    contractAddress?: string
-  ): Promise<{
+  async generateUnsignedTransaction(params: {
+    outputAddress: string;
+    amount: BigNumber;
+    gasPrice: number;
+    gasLimit: number;
+    chain?: number;
+    isSendAll: boolean;
+    contractAddress?: string;
+    contractData?: string;
+    nonce?: string;
+  }): Promise<{
     txn: string;
     amount: BigNumber;
     fee: BigNumber;
@@ -295,6 +299,18 @@ export default class EthereumWallet implements IWallet {
     }>;
     outputs: Array<{ value: string; address: string; isMine: boolean }>;
   }> {
+    const {
+      outputAddress,
+      amount,
+      gasPrice,
+      gasLimit,
+      chain = 1,
+      isSendAll,
+      contractAddress,
+      contractData,
+      nonce
+    } = params;
+
     logger.info('Generating unsignedTxn for', {
       address: this.address,
       outputAddress,
@@ -302,7 +318,9 @@ export default class EthereumWallet implements IWallet {
       gasPrice,
       gasLimit,
       chain,
-      contractAddress
+      contractAddress,
+      contractData,
+      nonce
     });
 
     let evmAddress = outputAddress;
@@ -342,7 +360,17 @@ export default class EthereumWallet implements IWallet {
       .multipliedBy(1000000000)
       .decimalPlaces(0);
 
-    if (contractAddress) {
+    if (contractData) {
+      rawTx = {
+        // call from server.
+        nonce: nonce ?? (await getTransactionCount(this.address, this.network)),
+        gasPrice: this.web3.utils.toHex(convertedGasPrice.toString()),
+        gasLimit: this.web3.utils.toHex(gasLimit),
+        to: contractAddress || mixedCaseOutputAddr,
+        value: this.web3.utils.toHex(totalAmount.toString(10)),
+        data: contractData
+      };
+    } else if (contractAddress) {
       const contractBalance = new BigNumber(
         (await this.getTotalBalance(contractAddress)).balance
       );
@@ -430,6 +458,58 @@ export default class EthereumWallet implements IWallet {
         }
       ]
     };
+  }
+  private async generatePersonalSignMessage(message: string, type: number) {
+    if (!message.startsWith('0x')) {
+      throw new Error('Message should be in hex');
+    }
+
+    logger.info('Generating message hex for', {
+      address: this.address,
+      message
+    });
+
+    const messageObj = MessageData.fromJSON({
+      messageType: type,
+      dataBytes: new Uint8Array(Buffer.from(message.slice(2), 'hex'))
+    });
+
+    const dataToSend = Buffer.from(
+      MessageData.encode(messageObj).finish()
+    ).toString('hex');
+
+    logger.verbose('Generated message hex', { dataToSend });
+
+    return dataToSend;
+  }
+
+  private async generateTypedDataMessage(message: string) {
+    try {
+      const messageObj = MessageData.fromJSON({
+        messageType: MessageData_MessageType.SIGN_TYPED_DATA,
+        eip712data: addTypeFields(JSON.parse(message))
+      });
+      const dataToSend = Buffer.from(
+        MessageData.encode(messageObj).finish()
+      ).toString('hex');
+      logger.verbose('Generated message hex', { dataToSend });
+
+      return dataToSend;
+    } catch (e) {
+      throw new Error(`Invalid message detected, ${e}`);
+    }
+  }
+
+  async generateMessageHex(message: string, type: number): Promise<string> {
+    switch (type) {
+      case MessageData_MessageType.ETH_SIGN:
+      case MessageData_MessageType.PERSONAL_SIGN:
+        return this.generatePersonalSignMessage(message, type);
+      case MessageData_MessageType.SIGN_TYPED_DATA:
+        return this.generateTypedDataMessage(message);
+      default:
+        throw new Error('Unsupported message type: ' + type);
+    }
   }
 
   async getTotalBalance(contractAddress?: string) {

@@ -4,6 +4,7 @@ export { default as NearWallet } from './near';
 export { default as SolanaWallet } from './solana';
 export * from './utils/extenalUtils';
 export * from './errors';
+export * from './ethereum/typedDataUtils';
 export { logLevel } from './utils';
 
 import {

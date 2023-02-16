@@ -1,7 +1,7 @@
 import { getTypeHash } from 'eip-712';
 import { TypedDataStruct_TypedDataNode_Eip712DataType } from './eip712MsgData.pb';
 
-export const addTypeFields = (typedData: any) => {
+export const addEIP712TypeFields = (typedData: any) => {
   // Create a deep copy of the input object
   const copy = JSON.parse(JSON.stringify(typedData));
   const types = copy.types;
@@ -126,7 +126,7 @@ export const addTypeFields = (typedData: any) => {
         type: isArrayType
           ? TypedDataStruct_TypedDataNode_Eip712DataType.ARRAY
           : TypedDataStruct_TypedDataNode_Eip712DataType.STRUCT,
-        size: Object.keys(obj).length,
+        size: children.length,
         structName: type,
         typeHash: !isArrayType ? getTypeHash(typedData, searchType) : undefined,
         children
@@ -142,8 +142,10 @@ export const addTypeFields = (typedData: any) => {
     }
   };
 
-  return {
+  const formattedData = {
     message: combineTypeField('message', copy.message, copy.primaryType),
     domain: combineTypeField('domain', copy.domain, 'EIP712Domain')
   };
+
+  return formattedData;
 };

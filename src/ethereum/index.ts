@@ -21,7 +21,7 @@ import { bufArrToArr } from '@ethereumjs/util/dist/bytes';
 import { formatHarmonyAddress } from '../utils/formatEthAddress';
 import { toHexString } from '../utils/uint8ArrayFromHexString';
 import { MessageData, MessageData_MessageType } from './eip712MsgData.pb';
-import { addTypeFields } from './typedDataUtils';
+import { addEIP712TypeFields } from './typedDataUtils';
 
 // In 2 places, put them in one place
 const intToUintByte = (ele: any, radix: number) => {
@@ -487,7 +487,7 @@ export default class EthereumWallet implements IWallet {
     try {
       const messageObj = MessageData.fromJSON({
         messageType: MessageData_MessageType.SIGN_TYPED_DATA,
-        eip712data: addTypeFields(JSON.parse(message))
+        eip712data: addEIP712TypeFields(JSON.parse(message))
       });
       const dataToSend = Buffer.from(
         MessageData.encode(messageObj).finish()

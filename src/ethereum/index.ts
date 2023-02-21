@@ -127,6 +127,22 @@ export default class EthereumWallet implements IWallet {
     return `m/44'/${coinIndex}'/${params.accountIndex}'/0/0`;
   }
 
+  public generateContractData(
+    contractAddress: string,
+    receiverAddress: string,
+    totalAmount: BigNumber
+  ): string {
+    if (!contractAddress || !receiverAddress) return '0x';
+
+    const contract = new this.web3.eth.Contract(this.minABI, contractAddress, {
+      from: this.evmAddress
+    });
+
+    return contract.methods
+      .transfer(receiverAddress, totalAmount.toString(10))
+      .encodeABI();
+  }
+
   public async setupNewWallet() {
     // Setup code here
   }
@@ -391,10 +407,10 @@ export default class EthereumWallet implements IWallet {
         throw new WalletError(WalletErrorType.INSUFFICIENT_FUNDS);
       }
 
-      const contract = new this.web3.eth.Contract(
-        this.minABI,
+      const data = this.generateContractData(
         contractAddress,
-        { from: this.evmAddress }
+        mixedCaseOutputAddr,
+        totalAmount
       );
 
       rawTx = {
@@ -404,9 +420,7 @@ export default class EthereumWallet implements IWallet {
         gasLimit: this.web3.utils.toHex(gasLimit),
         to: contractAddress,
         value: '0x0',
-        data: contract.methods
-          .transfer(mixedCaseOutputAddr, totalAmount.toString(10))
-          .encodeABI()
+        data: Buffer.from(data, 'utf8')
       };
     } else {
       if (isSendAll) {

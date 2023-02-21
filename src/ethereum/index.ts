@@ -420,7 +420,7 @@ export default class EthereumWallet implements IWallet {
         gasLimit: this.web3.utils.toHex(gasLimit),
         to: contractAddress,
         value: '0x0',
-        data: Buffer.from(data, 'utf8')
+        data
       };
     } else {
       if (isSendAll) {

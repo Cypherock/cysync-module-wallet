@@ -472,16 +472,10 @@ export const TypedDataStruct_TypedDataNode = {
     message: TypedDataStruct_TypedDataNode,
     writer: _m0.Writer = _m0.Writer.create()
   ): _m0.Writer {
-    if (message.name !== '') {
-      writer.uint32(10).string(message.name);
-    }
+    writer.uint32(10).string(message.name);
     writer.uint32(16).int32(message.type);
-    if (message.size !== 0) {
-      writer.uint32(24).uint32(message.size);
-    }
-    if (message.structName !== '') {
-      writer.uint32(34).string(message.structName);
-    }
+    writer.uint32(24).uint32(message.size);
+    writer.uint32(34).string(message.structName);
     if (message.data.length !== 0) {
       writer.uint32(42).bytes(message.data);
     }

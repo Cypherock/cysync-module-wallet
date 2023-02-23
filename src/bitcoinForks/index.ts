@@ -315,20 +315,21 @@ export default class BitcoinWallet implements Partial<IWallet> {
       coinId: this.coinId
     });
 
-    if (isSendAll) {
-      for (const output of outputList) {
-        if (output) {
-          output.value = undefined;
-        }
-      }
-    }
-
     // Convert BigNumber to JS Number
     for (const output of outputList) {
       if (output) {
+        let value: number | undefined = 0;
+        if (output.value) {
+          value = output.value.toNumber();
+        }
+
+        if (isSendAll) {
+          value = undefined;
+        }
+
         newOutputList.push({
           address: output.address,
-          value: output.value ? output.value.toNumber() : undefined
+          value
         });
       }
     }

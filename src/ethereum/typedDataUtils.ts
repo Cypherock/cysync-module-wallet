@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import { getTypeHash } from 'eip-712';
 import { TypedDataStruct_TypedDataNode_Eip712DataType } from './eip712MsgData.pb';
 
@@ -7,15 +8,15 @@ export const addEIP712TypeFields = (typedData: any) => {
   const types = copy.types;
 
   const encodeNumber = (
-    num: number,
+    num: string,
     numBytes: number,
     littleEndian: boolean
   ): Buffer => {
     const byteList: number[] = [];
-    let currNum = num;
+    let currNum = new BigNumber(num);
 
     for (let i = 0; i < numBytes; i++) {
-      const byte = currNum % 256;
+      const byte = currNum.mod(256).toNumber();
 
       if (littleEndian) {
         byteList.push(byte);
@@ -23,7 +24,9 @@ export const addEIP712TypeFields = (typedData: any) => {
         byteList.unshift(byte);
       }
 
-      currNum = Math.floor(currNum / 256);
+      currNum = new BigNumber(
+        currNum.dividedBy(256).toFixed(0, BigNumber.ROUND_FLOOR)
+      );
     }
 
     while (byteList.length < numBytes) {

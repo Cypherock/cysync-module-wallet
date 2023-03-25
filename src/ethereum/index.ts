@@ -44,6 +44,8 @@ export default class EthereumWallet implements IWallet {
   coin: EthCoinData;
   evmAddress: string;
   accountIndex: number;
+  //L1 fees may fluctuate upto 25% while broadcasting https://help.optimism.io/hc/en-us/articles/4416677738907-What-happens-if-the-L1-gas-price-spikes-while-a-transaction-is-in-process
+  optimismL1MaxVariation = 1.25;
 
   constructor(accountIndex: number, xpub: string, coin: EthCoinData, node = 0) {
     this.accountIndex = accountIndex;
@@ -152,8 +154,9 @@ export default class EthereumWallet implements IWallet {
     gasPrice: number,
     gasLimit: number,
     isSendAll?: boolean,
-    contractAddress?: string
-  ): Promise<{ fees: BigNumber; amount: BigNumber }> {
+    contractAddress?: string,
+    l1Cost?: string
+  ): Promise<{ fees: BigNumber; amount: BigNumber; l1fees: BigNumber }> {
     logger.verbose('Approximating Txn Fee', {
       address: this.address,
       evmAddress: this.evmAddress
@@ -164,7 +167,8 @@ export default class EthereumWallet implements IWallet {
       gasPrice,
       gasLimit,
       isSendAll,
-      contractAddress
+      contractAddress,
+      l1Cost
     });
 
     let totalAmount = new BigNumber(0);
@@ -176,9 +180,17 @@ export default class EthereumWallet implements IWallet {
 
     logger.info('Eth balance', { ethBalance });
 
+    let l1fees = new BigNumber(0);
+    if (
+      this.coin.coinListId === ETHCOINS[EthCoinMap.optimism].coinListId &&
+      l1Cost
+    ) {
+      l1fees = new BigNumber(l1Cost).multipliedBy(this.optimismL1MaxVariation);
+    }
     // From Gwei to wei
     const totalFee = new BigNumber(gasPrice * gasLimit)
       .multipliedBy(new BigNumber(Math.pow(10, 9)))
+      .plus(l1fees)
       .decimalPlaces(0);
     logger.info('Total fee', { totalFee });
 
@@ -215,7 +227,7 @@ export default class EthereumWallet implements IWallet {
       }
     }
 
-    return { fees: totalFee, amount: totalAmount };
+    return { fees: totalFee, amount: totalAmount, l1fees };
   }
 
   async generateMetaData(
@@ -299,6 +311,7 @@ export default class EthereumWallet implements IWallet {
     amount: BigNumber;
     gasPrice: number;
     gasLimit: number;
+    l1Cost: string;
     chain?: number;
     isSendAll: boolean;
     contractAddress?: string;
@@ -308,6 +321,7 @@ export default class EthereumWallet implements IWallet {
     txn: string;
     amount: BigNumber;
     fee: BigNumber;
+    l1Fee: BigNumber;
     inputs: Array<{
       value: string;
       address: string;
@@ -324,7 +338,8 @@ export default class EthereumWallet implements IWallet {
       isSendAll,
       contractAddress,
       contractData,
-      nonce
+      nonce,
+      l1Cost
     } = params;
 
     logger.info('Generating unsignedTxn for', {
@@ -336,7 +351,8 @@ export default class EthereumWallet implements IWallet {
       chain,
       contractAddress,
       contractData,
-      nonce
+      nonce,
+      l1Cost
     });
 
     let evmAddress = outputAddress;
@@ -366,10 +382,13 @@ export default class EthereumWallet implements IWallet {
       ethBalance: ethBalance.toString(),
       address: this.address
     });
-
+    const l1Fee = new BigNumber(l1Cost).multipliedBy(
+      this.optimismL1MaxVariation
+    );
     // From Gwei to wei
     const totalFee = new BigNumber(gasPrice * gasLimit)
       .multipliedBy(new BigNumber(Math.pow(10, 9)))
+      .plus(l1Fee)
       .decimalPlaces(0);
     logger.info('Total fee', { totalFee, address: this.address });
     const convertedGasPrice = new BigNumber(gasPrice)
@@ -456,6 +475,7 @@ export default class EthereumWallet implements IWallet {
     return {
       txn: txHex,
       fee: totalFee,
+      l1Fee,
       amount: totalAmount,
       inputs: [
         {

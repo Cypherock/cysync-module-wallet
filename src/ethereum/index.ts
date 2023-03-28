@@ -44,8 +44,6 @@ export default class EthereumWallet implements IWallet {
   coin: EthCoinData;
   evmAddress: string;
   accountIndex: number;
-  //L1 fees may fluctuate upto 25% while broadcasting https://help.optimism.io/hc/en-us/articles/4416677738907-What-happens-if-the-L1-gas-price-spikes-while-a-transaction-is-in-process
-  optimismL1MaxVariation = 1.25;
 
   constructor(accountIndex: number, xpub: string, coin: EthCoinData, node = 0) {
     this.accountIndex = accountIndex;
@@ -185,7 +183,7 @@ export default class EthereumWallet implements IWallet {
       this.coin.coinListId === ETHCOINS[EthCoinMap.optimism].coinListId &&
       l1Cost
     ) {
-      l1fees = new BigNumber(l1Cost).multipliedBy(this.optimismL1MaxVariation);
+      l1fees = new BigNumber(l1Cost);
     }
     // From Gwei to wei
     const totalFee = new BigNumber(gasPrice * gasLimit)
@@ -382,9 +380,7 @@ export default class EthereumWallet implements IWallet {
       ethBalance: ethBalance.toString(),
       address: this.address
     });
-    const l1Fee = new BigNumber(l1Cost).multipliedBy(
-      this.optimismL1MaxVariation
-    );
+    const l1Fee = new BigNumber(l1Cost);
     // From Gwei to wei
     const totalFee = new BigNumber(gasPrice * gasLimit)
       .multipliedBy(new BigNumber(Math.pow(10, 9)))

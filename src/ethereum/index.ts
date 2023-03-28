@@ -97,7 +97,7 @@ export default class EthereumWallet implements IWallet {
       }
     ];
     this.evmAddress = this.address;
-    if (this.coin.coinListId === ETHCOINS[EthCoinMap.harmony].coinListId) {
+    if (this.coin.coinListId === ETHCOINS[EthCoinMap.harmony]?.coinListId) {
       this.address = formatHarmonyAddress(this.evmAddress);
     }
   }
@@ -341,7 +341,7 @@ export default class EthereumWallet implements IWallet {
 
     let evmAddress = outputAddress;
     if (
-      chain === ETHCOINS[EthCoinMap.harmony].chain &&
+      chain === ETHCOINS[EthCoinMap.harmony]?.chain &&
       outputAddress.startsWith('one1')
     ) {
       // convert Harmony's bech32 addresses to hexstring address

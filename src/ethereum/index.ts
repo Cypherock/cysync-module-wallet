@@ -180,7 +180,7 @@ export default class EthereumWallet implements IWallet {
 
     let l1fees = new BigNumber(0);
     if (
-      this.coin.coinListId === ETHCOINS[EthCoinMap.optimism].coinListId &&
+      this.coin.coinListId === ETHCOINS[EthCoinMap.optimism]?.coinListId &&
       l1Cost
     ) {
       l1fees = new BigNumber(l1Cost);

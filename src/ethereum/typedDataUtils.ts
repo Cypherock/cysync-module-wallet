@@ -15,6 +15,8 @@ export const addEIP712TypeFields = (typedData: any) => {
     const byteList: number[] = [];
     let currNum = new BigNumber(num);
     if (num.toString().toLowerCase() === 'true') currNum = new BigNumber(1);
+    else if (num.toString().toLowerCase() === 'false')
+      currNum = new BigNumber(0);
 
     for (let i = 0; i < numBytes; i++) {
       const byte = currNum.mod(256).toNumber();
